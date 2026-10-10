@@ -1,5 +1,6 @@
-// Glare meter: how much the bright sun fills the view (visible, near the middle of the screen), eased over time the
-// way an eye or a camera adapts. Writes texel (0, 0) of colortex8; composite2 dims the exposure and veils the image
+// Glare meter: how much the bright sun is in the middle of the view (visible, and how close to where the camera
+// points), like the light meter of a camera. Eased only over a few frames, so a sun flickering through leaves does not
+// make the picture flicker; looking away takes the effect away at once. Writes texel (0, 0) of colortex8; composite2 dims the exposure and veils the image
 // by it and copies it to colortex9, where the next frame continues from. (Two buffers, because a pass that read and
 // wrote the same one would get Iris to flip it.)
 
@@ -34,14 +35,13 @@ void main() {
 #ifdef CINEMATIC_GLARE
     vec2 sunUv;
     if (sunOnScreen(sunUv)) {
-        // Straight at the sun it blinds; at the edge of the view it hardly does.
+        // Strongest looking straight at the sun, fading smoothly to nothing about 30 degrees away from it.
         float facing = -normalize(sunPosition).z;
-        target = sunVisibility(sunUv) * smoothstep(0.82, 0.985, facing)
-                * smoothstep(0.0, 0.08, sunDirection().y);
+        float aim = smoothstep(cos(radians(30.0)), 1.0, facing);
+        target = sunVisibility(sunUv) * aim * aim * smoothstep(0.0, 0.08, sunDirection().y);
     }
 #endif
     float previous = saturate(texelFetch(colortex9, ivec2(0), 0).r);
-    // Dazzled within a fraction of a second, back to normal in about two.
-    float seconds = target > previous ? 0.3 : 1.2;
+    float seconds = 0.08;
     outGlare = vec4(mix(previous, target, 1.0 - exp(-frameTime / seconds)), 0.0, 0.0, 1.0);
 }

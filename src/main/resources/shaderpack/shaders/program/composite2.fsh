@@ -1,4 +1,4 @@
-// Bloom from the mip chain of colortex5, exposure that follows day, night and caves, the glare of looking into the
+// Bloom from the mip chain of colortex5, exposure that follows day, night and caves and drops when looking into the
 // sun, lens flare, then tonemapping.
 
 #include "/lib/common.glsl"
@@ -107,22 +107,12 @@ void main() {
 #endif
     outGlareMemory = vec4(glare, 0.0, 0.0, 1.0);
 #ifdef BLOOM
-    // Looking into the sun, its light bleeds further over the picture.
-    float amount = (0.025 + rainStrength * 0.03 + float(isEyeInWater == 1) * 0.08 + glare * 0.08 * GLARE_STRENGTH)
-            * BLOOM_STRENGTH;
+    float amount = (0.025 + rainStrength * 0.03 + float(isEyeInWater == 1) * 0.08) * BLOOM_STRENGTH;
     color = mix(color, bloom(texcoord), amount);
 #endif
-    // Like a camera pointed at a bright light: the exposure drops, so the rest of the scene darkens...
-    color *= exposure() * (1.0 - 0.45 * glare * GLARE_STRENGTH);
-#ifdef DIM_OVERWORLD
-    if (glare > 0.001) {
-        // ...and scattered light veils the picture in the colour of the sun, brightest around it.
-        vec2 sunUv;
-        sunOnScreen(sunUv);
-        float d = length((texcoord - sunUv) * vec2(viewWidth / viewHeight, 1.0));
-        color += sunDiscColor() / SUN_ILLUMINANCE * glare * GLARE_STRENGTH * (0.05 + 0.4 * exp(-d * 4.0));
-    }
-#endif
+    // Like a camera pointed at a bright light: the exposure drops, everything around darkens and the sun with the glow
+    // around it stops being a blown-out patch.
+    color *= exposure() * (1.0 - 0.65 * saturate(glare * GLARE_STRENGTH));
 #if defined LENS_FLARE && defined DIM_OVERWORLD
     color += lensFlare(texcoord);
 #endif
