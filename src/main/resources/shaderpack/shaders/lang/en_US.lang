@@ -48,6 +48,8 @@ option.CLOUDS=Clouds
 option.CLOUDS.comment=Off, flat like vanilla Fast clouds, or blocky 3D clouds you can fly through. Their shapes come from the game's cloud texture.
 option.CLOUD_COVERAGE=Cloud Coverage
 option.CLOUD_SIZE=Cloud Size
+option.CLOUD_HEIGHT=Cloud Height
+option.CLOUD_HEIGHT.comment=Stretches the cloud cubes upwards (1 = vanilla proportions).
 option.CLOUD_SIZE.comment=Size of the cloud cubes compared to vanilla (1 = vanilla 12 x 12 x 4 blocks); same shapes, more volume.
 option.LIGHT_SHAFTS=Light Shafts
 option.LIGHT_SHAFTS.comment=Rays of light through gaps when looking towards the sun.

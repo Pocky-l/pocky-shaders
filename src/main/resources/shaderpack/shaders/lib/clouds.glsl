@@ -1,6 +1,7 @@
 // Clouds close to vanilla Fancy clouds: the game's own cloud texture (a resource pack that changes it changes these
 // too), one texel = a 12 x 12 block cell, 4 blocks thick at the vanilla cloud height (both x CLOUD_SIZE: bigger,
-// more solid-looking cubes in the same shapes), drifting the vanilla way. What
+// more solid-looking cubes in the same shapes; the thickness also x CLOUD_HEIGHT: taller cubes), drifting the
+// vanilla way. What
 // the pack adds is light: the faces are lit by the sun and the sky (bright tops, softer sides, darker bases, sides
 // glowing towards a low sun), distance blends them into the sky, and they shade the ground. Rain keeps the same
 // shapes: some more cells join in and the clouds turn grey, as vanilla's do. A player can fly through them.
@@ -9,7 +10,7 @@ uniform sampler2D cloudtex;
 
 // Vanilla: cloud height 192, the geometry sits 0.33 above it.
 const float CLOUD_BOTTOM = 192.33;
-const float CLOUD_THICKNESS = 4.0 * CLOUD_SIZE;
+const float CLOUD_THICKNESS = 4.0 * CLOUD_SIZE * CLOUD_HEIGHT;
 const float CLOUD_CELL = 12.0 * CLOUD_SIZE;
 // Bigger clouds stay visible farther out.
 const float CLOUD_RANGE = 1536.0 + 512.0 * CLOUD_SIZE;

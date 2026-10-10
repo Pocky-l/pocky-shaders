@@ -34,7 +34,8 @@ const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0
 // Sky
 #define CLOUDS 2 // [0 1 2]
 #define CLOUD_COVERAGE 1.0 // [0.5 0.75 1.0 1.25 1.5]
-#define CLOUD_SIZE 2.0 // [1.0 1.5 2.0 2.5 3.0]
+#define CLOUD_SIZE 1.6 // [1.0 1.3 1.6 2.0 2.5 3.0]
+#define CLOUD_HEIGHT 1.5 // [1.0 1.25 1.5 2.0 2.5]
 #define LIGHT_SHAFTS
 #define LIGHT_SHAFT_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
 #define FOG_DENSITY 1.0 // [0.0 0.25 0.5 0.75 1.0 1.5 2.0]
