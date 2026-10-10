@@ -14,6 +14,7 @@ uniform sampler2D colortex7;
 #include "/lib/water.glsl"
 
 uniform sampler2D colortex0;
+uniform sampler2D colortex2;
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
 uniform sampler2D depthtex0;
@@ -282,6 +283,11 @@ void main() {
     vec3 surfaceView = viewPosition(texcoord, false);
     bool sky = isSkyAt(texcoord);
 
+    // colortex0 already holds the clouds deferred1 drew in front of the opaque scene. Water, glass and fog belong to
+    // the part of the pixel the clouds let through (seen from above, the sea and the land are below the clouds).
+    float cloudTransmittance = texture(colortex2, texcoord).r;
+    vec3 withClouds = color;
+
     vec4 waterData = texture(colortex4, texcoord);
     float normalSpread = length(fwidth(decodeNormal(waterData.xy)));
     if (waterData.w > 0.5) {
@@ -290,6 +296,7 @@ void main() {
 
     vec4 translucent = texture(colortex3, texcoord);
     color = color * (1.0 - translucent.a) + translucent.rgb;
+    color = mix(withClouds, color, cloudTransmittance);
 
     vec3 playerPos = mat3(gbufferModelViewInverse) * surfaceView;
     float dist = length(playerPos);
@@ -313,7 +320,7 @@ void main() {
 #else
         float renderDistance = far;
 #endif
-        color = applyFog(color, playerPos, renderDistance);
+        color = mix(color, applyFog(color, playerPos, renderDistance), cloudTransmittance);
     }
     color = applyBlindnessFog(color, sky ? 1000.0 : dist);
     color += lightShafts(texcoord, noise);

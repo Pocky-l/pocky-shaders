@@ -5,6 +5,7 @@
 /*
 const int colortex0Format = RGBA16F;
 const int colortex1Format = RGBA16;
+const int colortex2Format = R8;
 const int colortex3Format = RGBA16F;
 const int colortex4Format = RGBA16;
 const int colortex5Format = RGBA16F;

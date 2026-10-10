@@ -12,8 +12,9 @@ uniform sampler2D cloudtex;
 const float CLOUD_BOTTOM = 192.33;
 const float CLOUD_THICKNESS = 4.0 * CLOUD_SIZE * CLOUD_HEIGHT;
 const float CLOUD_CELL = 12.0 * CLOUD_SIZE;
-// Bigger clouds stay visible farther out.
-const float CLOUD_RANGE = 1536.0 + 512.0 * CLOUD_SIZE;
+// Over the whole visible world, Distant Horizons terrain included: far clouds have melted into the sky colour long
+// before the fade at the end of the range (cloudClarity), so there is no edge.
+const float CLOUD_RANGE = 8192.0;
 // Opacity per block: about vanilla's 0.8 through the 4 blocks of a vanilla-sized cloud, thicker clouds a little more
 // solid, while thin slices at the edges stay see-through.
 const float CLOUD_DENSITY = 0.4 / sqrt(CLOUD_SIZE);

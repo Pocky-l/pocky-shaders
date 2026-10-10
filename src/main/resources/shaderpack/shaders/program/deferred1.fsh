@@ -1,5 +1,7 @@
-// Applies ambient occlusion and far (screen-space) shadows to the opaque scene, draws the sky behind it and
-// volumetric clouds over both.
+// Applies ambient occlusion and far (screen-space) shadows to the opaque scene, draws the sky behind it and the clouds
+// over both. The clouds' transmittance goes to colortex2: composite keeps the fog of the ground and the water below
+// from covering clouds that are in front of them. (The clouds themselves stay here, so rain, particles and the hand,
+// drawn after this pass, end up in front of them.)
 
 #include "/lib/common.glsl"
 #include "/lib/atmosphere.glsl"
@@ -21,8 +23,9 @@ uniform mat4 dhProjectionInverse;
 
 in vec2 texcoord;
 
-/* RENDERTARGETS: 0 */
+/* RENDERTARGETS: 0,2 */
 layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outCloudTransmittance;
 
 float blurredAo(float depth) {
     vec2 px = 1.0 / vec2(viewWidth, viewHeight);
@@ -144,6 +147,7 @@ void main() {
 #endif
     }
 
+    outCloudTransmittance = vec4(1.0);
 #ifdef DIM_OVERWORLD
     vec3 dir = normalize(mat3(gbufferModelViewInverse) * viewPos);
     float sceneDist = sky ? 1e6 : length(viewPos);
@@ -159,8 +163,8 @@ void main() {
         vec3 skyBehind = sampleSkyLut(vec3(dir.x, max(dir.y, 0.0), dir.z), sunDir);
         vec4 clouds = cloudLayers(dir, sceneDist, lightDirection(), directLightColor(), ambientLightColor(), skyBehind,
                 CLOUD_STEPS);
-
         color = color * clouds.a + clouds.rgb;
+        outCloudTransmittance = vec4(clouds.a);
     }
 #endif
 #endif
