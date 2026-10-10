@@ -87,6 +87,10 @@ float stormDarkness() { return thunderStrength * (1.0 - snowWeather); }
 // it lifts dark places, from about half to about twice the default.
 float brightnessLift() { return mix(0.5, 2.0, screenBrightness) / 1.25; }
 
+// How clearly the sun (or moon) disc itself shows: highlights mirror the disc, and behind a rain or storm deck there is
+// none to mirror - only the dim light that comes through the clouds, which lights surfaces but makes no glints.
+float discClarity() { return (1.0 - rainStrength) * (1.0 - thunderStrength); }
+
 // How hard it snows (0 in rain).
 float snowfall() { return rainStrength * snowWeather; }
 float luminance(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }

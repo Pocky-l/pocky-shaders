@@ -232,7 +232,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         // single sparkling pixels; the peak is capped for the same reason.
         vec3 l = lightDirection();
         float roughness = 0.06 + min(normalSpread * 1.5, 0.2) + 0.06 * smoothstep(48.0, 400.0, surfaceDist);
-        float spec = min(ggxSpecular(worldNormal, -normalize(surfacePlayer), l, roughness), 6.0);
+        float spec = min(ggxSpecular(worldNormal, -normalize(surfacePlayer), l, roughness), 6.0) * discClarity();
         result += directLightColor() * spec * smoothstep(0.5, 0.9, sky) * cloudShadow(surfacePlayer, l);
 #endif
     }

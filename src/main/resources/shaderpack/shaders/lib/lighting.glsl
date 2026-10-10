@@ -150,7 +150,8 @@ vec3 shade(Surface s, Lights lights, float noise) {
         direct = lights.direct / PI * diffuse * visibility * skyGate;
 #ifdef SURFACE_SHEEN
         if (s.material != MAT_PLANT && s.material != MAT_PARTICLE && nl > 0.0) {
-            sheen = lights.direct * sunSheen(s.normal, viewDir, l, sheenRoughness(s.material)) * visibility * skyGate;
+            sheen = lights.direct * sunSheen(s.normal, viewDir, l, sheenRoughness(s.material)) * visibility * skyGate
+                    * discClarity();
         }
 #endif
 #ifdef FOLIAGE_TRANSLUCENCY
@@ -188,7 +189,8 @@ vec3 shade(Surface s, Lights lights, float noise) {
         float film = foliage ? 0.5 : mix(0.8, 2.2, saturate(s.normal.y));
         float f = fresnelSchlick(dot(viewDir, s.normal), 0.03) * wet * film;
         color += sampleSkyLut(r, sunDirection()) * f;
-        color += lights.direct * ggxSpecular(s.normal, viewDir, l, 0.25) * wet * 0.5 * (dot(direct, vec3(1.0)) > 0.0 ? 1.0 : 0.0);
+        color += lights.direct * ggxSpecular(s.normal, viewDir, l, 0.25) * wet * 0.5 * discClarity()
+                * (dot(direct, vec3(1.0)) > 0.0 ? 1.0 : 0.0);
     }
 #endif
     return color;
