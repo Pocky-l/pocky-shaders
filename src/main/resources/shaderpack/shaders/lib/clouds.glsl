@@ -4,8 +4,9 @@
 // The prepare pass bakes the map for the area around the camera into colortex7 (one fetch per march step instead of
 // a full noise stack); the deferred pass marches through the slab.
 
-const float CLOUD_BOTTOM = 210.0;
-const float CLOUD_TOP = 330.0;
+// Base at the vanilla cloud height, so a player can fly into them.
+const float CLOUD_BOTTOM = 192.0;
+const float CLOUD_TOP = 430.0;
 const float CLOUD_HIGH_ALTITUDE = 900.0;
 
 // Cloud map in colortex7, next to the sky table: 256 x 256 texels covering CLOUD_MAP_SPAN blocks around the camera.
@@ -27,7 +28,7 @@ float cloudFbm(vec2 p, int octaves) {
 }
 
 float cloudCoverage() {
-    return saturate(0.42 * CLOUD_COVERAGE + rainStrength * 0.4);
+    return saturate(0.4 * CLOUD_COVERAGE + rainStrength * 0.4);
 }
 
 vec2 cloudDrift() {
@@ -41,11 +42,13 @@ vec2 cloudMapCenter() {
 
 // Column height of the clouds at world xz (0 = no cloud, 1 = up to the slab top). Used by the prepare pass.
 float cloudColumn(vec2 worldXZ) {
-    vec2 p = (worldXZ + cloudDrift()) * 0.0011;
-    float shape = cloudFbm(p, 6);
+    vec2 p = (worldXZ + cloudDrift()) * 0.0032;
+    float shape = cloudFbm(p, 5);
     float coverage = cloudCoverage();
-    float c = saturate((shape - (1.0 - coverage)) / max(coverage, 0.05) * 1.8);
-    return c * (0.55 + 0.45 * valueNoise(p * 0.37 + 3.1));
+    float c = saturate((shape - (1.0 - coverage)) / max(coverage, 0.05) * 2.4);
+    // Some cells grow into tall towers, most stay low and puffy.
+    float growth = valueNoise(p * 0.31 + 3.1);
+    return c * (0.3 + 0.7 * growth * growth);
 }
 
 float cloudNoise3(vec3 p) {
@@ -63,6 +66,9 @@ float cloudNoise3(vec3 p) {
 #ifdef CLOUD_LOOKUP
 
 float sampleCloudColumn(vec2 worldXZ) {
+#ifdef CLOUD_MAP_DIRECT
+    return cloudColumn(worldXZ);
+#endif
     vec2 local = (worldXZ - cloudMapCenter()) / CLOUD_MAP_SPAN + 0.5;
     if (any(lessThan(local, vec2(0.0))) || any(greaterThan(local, vec2(1.0)))) {
         return 0.0;
@@ -82,11 +88,11 @@ float cloudDensity(vec3 worldPos, bool detail) {
         return 0.0;
     }
     // Flat base, rounded dome towards the column top.
-    float d = saturate((column - h) * 5.0) * smoothstep(0.0, 0.08, h);
+    float d = saturate((column - h) * 3.5) * smoothstep(0.0, 0.05, h);
     if (detail && d > 0.0) {
-        vec3 q = (worldPos + vec3(cloudDrift().x, 0.0, cloudDrift().y)) * 0.045;
-        float erosion = cloudNoise3(q) * 0.65 + cloudNoise3(q * 2.7) * 0.35;
-        d = saturate(d - erosion * (0.55 - 0.35 * h) * (1.0 - d * 0.6));
+        vec3 q = (worldPos + vec3(cloudDrift().x, 0.0, cloudDrift().y)) * 0.028;
+        float erosion = cloudNoise3(q) * 0.6 + cloudNoise3(q * 2.9 + 7.0) * 0.4;
+        d = saturate(d * 1.4 - erosion * 0.75);
     }
     return d;
 }
@@ -111,7 +117,10 @@ vec4 volumetricClouds(vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, 
         return vec4(0.0, 0.0, 0.0, 1.0);
     }
 
-    float stepLen = (t1 - t0) / float(steps);
+    // Grazing rays cross much more cloud: more steps towards the horizon, and no further than the haze lets see.
+    t1 = min(t1, t0 + 3000.0);
+    int count = min(int(float(steps) * mix(2.5, 1.0, abs(dir.y))), 72);
+    float stepLen = (t1 - t0) / float(count);
     float mu = dot(dir, lightDir);
     float phase = cloudPhase(mu);
     vec3 overcast = mix(vec3(1.0), vec3(0.5), rainStrength);
@@ -121,23 +130,25 @@ vec4 volumetricClouds(vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, 
     vec3 scattered = vec3(0.0);
     float transmittance = 1.0;
     float t = t0 + stepLen * noise;
-    for (int i = 0; i < steps; i++) {
+    for (int i = 0; i < count; i++) {
         vec3 p = origin + dir * t;
         float d = cloudDensity(p, true);
         if (d > 0.01) {
-            float sigma = d * 0.07;
-            // Optical depth towards the light, a few coarse samples.
+            float sigma = d * 0.06;
+            // Optical depth towards the light, a few samples further and further out.
             float od = 0.0;
-            for (int j = 1; j <= 3; j++) {
-                float s = float(j * j) * 9.0;
-                od += cloudDensity(p + lightDir * s, false) * (float(j) * 2.0 - 1.0) * 9.0;
+            float prev = 0.0;
+            for (int j = 1; j <= 4; j++) {
+                float s = float(j * j) * 7.0;
+                od += cloudDensity(p + lightDir * s, false) * (s - prev);
+                prev = s;
             }
-            od *= 0.07;
-            // Beer with a softened tail standing in for multiple scattering; powder darkens thin sun-facing edges less.
-            float beer = max(exp(-od), exp(-od * 0.25) * 0.7);
-            float powder = 1.0 - exp(-d * 6.0);
+            od *= 0.06;
+            // Beer with a softened tail standing in for multiple scattering; powder darkens the inside of thick parts.
+            float beer = max(exp(-od), exp(-od * 0.3) * 0.35);
+            float powder = 1.0 - exp(-d * 4.0 - od * 0.5);
             float h = (p.y - CLOUD_BOTTOM) / (CLOUD_TOP - CLOUD_BOTTOM);
-            vec3 light = sunLight * beer * mix(0.6, 1.0, powder) + skyLight * (0.35 + 0.65 * h);
+            vec3 light = sunLight * beer * mix(0.45, 1.0, powder) + skyLight * (0.12 + 0.88 * h * h);
             float stepTransmittance = exp(-sigma * stepLen);
             scattered += light * overcast * transmittance * (1.0 - stepTransmittance);
             transmittance *= stepTransmittance;
@@ -160,7 +171,7 @@ vec4 cirrusClouds(vec3 dir, vec3 lightDir, vec3 directColor, vec3 ambientColor) 
     float t = (CLOUD_HIGH_ALTITUDE - cameraPosition.y) / dir.y;
     vec2 p = cameraPosition.xz + dir.xz * t;
     float streak = cloudFbm(vec2((p.x + frameTimeCounter * 3.0) * 0.0006, p.y * 0.0025), 4);
-    float a = saturate((streak - 0.52) * 2.2) * 0.45 * (1.0 - rainStrength * 0.6) * smoothstep(0.0, 0.12, dir.y);
+    float a = saturate((streak - 0.52) * 2.2) * 0.25 * (1.0 - rainStrength * 0.6) * smoothstep(0.0, 0.12, dir.y);
     float forward = 1.0 + 2.5 * pow(saturate(dot(dir, lightDir)), 10.0);
     vec3 lit = directColor * 0.08 * forward + ambientColor * 0.35;
     return vec4(lit * a * mix(vec3(1.0), vec3(0.55), rainStrength), 1.0 - a);

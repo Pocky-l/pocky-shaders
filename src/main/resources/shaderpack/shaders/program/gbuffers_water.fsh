@@ -39,9 +39,10 @@ void main() {
     if (blockId == ID_WATER) {
         vec3 worldPos = playerPos + cameraPosition;
         vec3 wn = n;
-        if (abs(n.y) > 0.5) {
+        float waveFade = 1.0 - smoothstep(ANIMATION_DISTANCE * 1.5, ANIMATION_DISTANCE * 2.5, length(playerPos));
+        if (abs(n.y) > 0.5 && waveFade > 0.0) {
             // Top (or, seen from below, bottom) of the water: waves, calmer in sheltered water.
-            wn = waterNormal(worldPos.xz, 0.4 + 0.6 * lightmap.y);
+            wn = waterNormal(worldPos.xz, (0.4 + 0.6 * lightmap.y) * waveFade);
             wn.y *= sign(n.y);
         }
         outTranslucent = vec4(0.0);

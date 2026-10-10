@@ -63,6 +63,10 @@ const int ID_ICE = 10021;
 const int ID_GLASS = 10022;
 const int ID_LAVA = 10023;
 
+// Beyond these distances (blocks) effects nobody can make out are skipped.
+const float ANIMATION_DISTANCE = 64.0;
+const float DETAIL_DISTANCE = 64.0;
+
 float saturate(float x) { return clamp(x, 0.0, 1.0); }
 vec2 saturate(vec2 x) { return clamp(x, 0.0, 1.0); }
 vec3 saturate(vec3 x) { return clamp(x, 0.0, 1.0); }
@@ -110,6 +114,12 @@ float dither(vec2 fragCoord) {
 float hash12(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
     p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float hash13(vec3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.zyx + 31.32);
     return fract((p3.x + p3.y) * p3.z);
 }
 

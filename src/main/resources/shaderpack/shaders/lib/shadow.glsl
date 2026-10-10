@@ -45,16 +45,17 @@ vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliag
     float phi = noise * 2.0 * PI;
     float solid = 0.0;
     float total = 0.0;
-    for (int i = 0; i < SHADOW_SAMPLES; i++) {
-        vec3 p = vec3(coord.xy + vogelDisk(i, SHADOW_SAMPLES, phi) * softness, coord.z);
+    int samples = length(playerPos) > DETAIL_DISTANCE ? max(SHADOW_SAMPLES / 2, 2) : SHADOW_SAMPLES;
+    for (int i = 0; i < samples; i++) {
+        vec3 p = vec3(coord.xy + vogelDisk(i, samples, phi) * softness, coord.z);
         solid += texture(shadowtex1, p);
 #ifdef COLORED_SHADOWS
         total += texture(shadowtex0, p);
 #endif
     }
-    solid /= float(SHADOW_SAMPLES);
+    solid /= float(samples);
 #ifdef COLORED_SHADOWS
-    total /= float(SHADOW_SAMPLES);
+    total /= float(samples);
     if (solid - total > 0.01) {
         // Light passing through translucent blocks: shadowcolor0 holds their tint (already 1 where nothing is).
         vec4 tint = texture(shadowcolor0, coord.xy);

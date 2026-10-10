@@ -23,7 +23,9 @@ void main() {
     vec3 worldPos = playerPos + cameraPosition;
     float height = saturate(0.5 - at_midBlock.y / 64.0);
     vec2 lm = saturate(((gl_TextureMatrix[1] * gl_MultiTexCoord1).xy - 1.0 / 32.0) * 16.0 / 15.0);
-    float exposed = smoothstep(0.2, 0.7, lm.y);
+    float exposed = smoothstep(0.2, 0.7, lm.y)
+        * (1.0 - smoothstep(ANIMATION_DISTANCE * 0.75, ANIMATION_DISTANCE, length(playerPos)));
+    if (exposed > 0.0) {
 #ifdef WAVING_PLANTS
     if (blockId == ID_PLANT || blockId == ID_EMISSIVE_PLANT) {
         playerPos += windSway(worldPos, 0.09 * height) * exposed;
@@ -40,6 +42,7 @@ void main() {
         playerPos += leafRustle(worldPos, 0.03) * exposed * vec3(1.0, 0.3, 1.0);
     }
 #endif
+    }
 
     vec4 clip = shadowProjection * shadowModelView * vec4(playerPos, 1.0);
     gl_Position = vec4(distortShadowClip(clip.xyz / clip.w), 1.0);

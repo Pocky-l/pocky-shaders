@@ -47,7 +47,9 @@ void main() {
     vec3 worldPos = playerPos + cameraPosition;
     // 0 at the bottom of the block, 1 at its top (at_midBlock points from the vertex to the block centre, in 1/64).
     float height = saturate(0.5 - at_midBlock.y / 64.0);
-    float exposed = smoothstep(0.2, 0.7, lightmap.y);
+    float exposed = smoothstep(0.2, 0.7, lightmap.y)
+        * (1.0 - smoothstep(ANIMATION_DISTANCE * 0.75, ANIMATION_DISTANCE, length(playerPos)));
+    if (exposed > 0.0) {
 #ifdef WAVING_PLANTS
     if (id == ID_PLANT || id == ID_EMISSIVE_PLANT) {
         playerPos += windSway(worldPos, 0.09 * height) * exposed;
@@ -64,6 +66,7 @@ void main() {
         playerPos += leafRustle(worldPos, 0.03) * exposed * vec3(1.0, 0.3, 1.0);
     }
 #endif
+    }
 #elif defined PROG_ENTITIES || defined PROG_BLOCK
     material = MAT_ENTITY;
 #elif defined PROG_HAND

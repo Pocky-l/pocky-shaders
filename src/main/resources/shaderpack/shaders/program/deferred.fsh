@@ -31,6 +31,11 @@ void main() {
         return;
     }
     vec3 viewPos = screenToView(vec3(texcoord, depth));
+    float fade = 1.0 - smoothstep(DETAIL_DISTANCE * 0.6, DETAIL_DISTANCE, -viewPos.z);
+    if (fade <= 0.0) {
+        outAo = vec4(1.0);
+        return;
+    }
     vec4 data = texture(colortex1, texcoord);
     vec3 normal = decodeNormal(data.xy);
 
@@ -57,7 +62,7 @@ void main() {
         occlusion += (sceneZ >= sampleView.z + 0.03 ? 1.0 : 0.0) * rangeCheck;
     }
     float ao = 1.0 - occlusion / float(SSAO_SAMPLES);
-    outAo = vec4(pow(ao, 1.6 * SSAO_STRENGTH), 0.0, 0.0, 1.0);
+    outAo = vec4(mix(1.0, pow(ao, 1.6 * SSAO_STRENGTH), fade), 0.0, 0.0, 1.0);
 #else
     outAo = vec4(1.0);
 #endif
