@@ -15,5 +15,15 @@ void main() {
     vec3 viewPos = (gl_ModelViewMatrix * gl_Vertex).xyz;
     playerPos = mat3(gbufferModelViewInverse) * viewPos + gbufferModelViewInverse[3].xyz;
     worldNormal = normalize(mat3(gbufferModelViewInverse) * (gl_NormalMatrix * gl_Normal));
+#ifdef PROG_DH_WATER
+    if (worldNormal.y > 0.5) {
+        // LOD water tops sit at the full block height, vanilla water surfaces 1/9 of a block lower.
+        const float DROP = 1.0 / 9.0;
+        playerPos.y -= DROP;
+        viewPos -= mat3(gl_ModelViewMatrix) * vec3(0.0, DROP, 0.0);
+    }
+    gl_Position = gl_ProjectionMatrix * vec4(viewPos, 1.0);
+#else
     gl_Position = ftransform();
+#endif
 }

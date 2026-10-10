@@ -27,6 +27,8 @@ const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0
 #define WATER_REFRACTION
 #define WATER_WAVE_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
 #define WATER_CLARITY 1.0 // [0.5 0.75 1.0 1.5 2.0]
+#define WATER_CAUSTICS
+#define WATER_FOAM
 
 // Sky
 #define CLOUDS 2 // [0 1 2]
@@ -43,6 +45,9 @@ const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0
 #define SATURATION 1.0 // [0.6 0.8 0.9 1.0 1.1 1.2 1.4]
 #define WARMTH 1.0 // [0.0 0.5 1.0 1.5 2.0]
 #define FXAA
+
+// Debug: 1 = colour each pixel by who drew it (vanilla chunks / Distant Horizons / water).
+#define DEBUG_VIEW 0 // [0 1]
 
 const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 30.0 40.0]
 

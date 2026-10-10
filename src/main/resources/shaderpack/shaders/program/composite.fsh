@@ -11,6 +11,7 @@ uniform sampler2D colortex7;
 #endif
 #include "/lib/lighting.glsl"
 #include "/lib/fog.glsl"
+#include "/lib/water.glsl"
 
 uniform sampler2D colortex0;
 uniform sampler2D colortex3;
@@ -107,7 +108,8 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise) {
 }
 #endif
 
-vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noise) {
+// normalSpread: screen-space change of the water normal per pixel (taken outside any branch).
+vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float normalSpread) {
     vec3 worldNormal = decodeNormal(waterData.xy);
     vec4 tintSky = unpackWater(waterData.z);
     vec3 tint = tintSky.rgb;
@@ -131,11 +133,32 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
 #endif
     vec3 below = texture(colortex0, refractUv).rgb;
     vec3 floorView = viewPosition(refractUv, true);
-    float waterDist = isOpaqueSkyAt(refractUv) && isEyeInWater == 0 ? 64.0 : length(floorView - surfaceView);
+    bool floorIsSky = isOpaqueSkyAt(refractUv);
+    float waterDist = floorIsSky && isEyeInWater == 0 ? 64.0 : length(floorView - surfaceView);
+    float surfaceDist = length(surfaceView);
+    vec3 floorPlayer = mat3(gbufferModelViewInverse) * floorView;
+    // Vertical water depth under this pixel (caustics, foam).
+    float depthBelow = floorIsSky ? 64.0 : surfacePlayer.y - floorPlayer.y;
 #ifdef DISTANT_HORIZONS
     // DH water: LOD sea floors are coarse and its depth is unreliable; never let it look shallower than a few blocks.
-    if (texture(depthtex0, uv).r >= 1.0) {
-        waterDist = max(waterDist, 4.0);
+    // Vanilla water eases into the same floor towards the border, so the switch to LODs does not show as a line.
+    float minDepth = texture(depthtex0, uv).r >= 1.0 ? 4.0 : 4.0 * smoothstep(far * 0.7, far, surfaceDist);
+    waterDist = max(waterDist, minDepth);
+#endif
+
+#if defined WATER_CAUSTICS && defined DIM_OVERWORLD
+    // Sunlight focused by the waves draws moving bright veins on a shallow, sunlit bottom.
+    if (isEyeInWater == 0 && !floorIsSky) {
+        float fade = smoothstep(0.2, 0.7, depthBelow) * (1.0 - smoothstep(3.0, 9.0, depthBelow))
+                * (1.0 - smoothstep(32.0, 96.0, length(floorPlayer)));
+        if (fade > 0.0) {
+            vec3 l = lightDirection();
+            // The pattern belongs to the surface the light came through.
+            vec2 p = (floorPlayer + cameraPosition).xz + l.xz / max(l.y, 0.25) * depthBelow;
+            float caustics = waterCaustics(p) * fade * smoothstep(0.1, 0.35, l.y) * (1.0 - rainStrength)
+                    * smoothstep(0.5, 0.9, sky) * cloudShadow(surfacePlayer, l);
+            below *= 1.0 + caustics * 1.5;
+        }
     }
 #endif
 
@@ -145,7 +168,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
         result = below * 0.9;
     } else {
         // Absorption (reds go first) and in-scattered light colour the water with depth.
-        vec3 absorb = (vec3(0.38, 0.09, 0.07) + (1.0 - tint) * 0.12) / WATER_CLARITY;
+        vec3 absorb = (vec3(0.40, 0.11, 0.08) + (1.0 - tint) * 0.12) / WATER_CLARITY;
         vec3 transmit = exp(-absorb * waterDist);
 #ifdef DIM_OVERWORLD
         vec3 light = (ambientLightColor() * 0.6 + directLightColor() * 0.15) / PI * sky * sky;
@@ -153,7 +176,10 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
         vec3 light = vec3(0.04);
 #endif
         light += blockLightColor() * 0.02;
-        vec3 scatterColor = light * mix(vec3(0.05, 0.22, 0.26), tint * vec3(0.3, 0.5, 0.55), 0.5);
+        // Shallows glow turquoise over the bottom, open deep water turns a darker, richer blue.
+        vec3 shallowScatter = mix(vec3(0.05, 0.22, 0.26), tint * vec3(0.3, 0.5, 0.55), 0.5);
+        vec3 deepScatter = mix(vec3(0.02, 0.10, 0.22), tint * vec3(0.15, 0.3, 0.5), 0.5);
+        vec3 scatterColor = light * mix(shallowScatter, deepScatter, smoothstep(3.0, 18.0, waterDist));
         result = below * transmit + scatterColor * (1.0 - exp(-waterDist * 0.4 / WATER_CLARITY));
         result *= mix(0.7, 1.0, smoothstep(0.1, 0.8, waterDist));
     }
@@ -165,7 +191,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
         float shallow = 1.0 - smoothstep(0.1, 0.8, waterDist);
         float fresnel = 0.07 + 0.55 * fresnelSchlick(dot(-viewDir, viewNormal), mix(0.02, 0.05, shallow));
         // Grazing views of far water would turn it into a white mirror of the sky; keep its colour like near water.
-        fresnel *= mix(1.0, 0.7, smoothstep(80.0, 400.0, length(surfaceView)));
+        fresnel *= mix(1.0, 0.7, smoothstep(80.0, 400.0, surfaceDist));
         vec3 reflection = vec3(0.0);
 #ifdef DIM_OVERWORLD
         vec3 reflectWorld = mat3(gbufferModelViewInverse) * reflectView;
@@ -181,16 +207,36 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
         reflection = skyRefl * smoothstep(0.3, 0.85, sky);
 #endif
 #if WATER_REFLECTIONS == 2 && SSR_STEPS > 0
-        vec4 ssr = screenReflection(surfaceView, reflectView, noise);
+        // Fixed ray offset: a per-pixel one only sparkles without temporal filtering.
+        vec4 ssr = screenReflection(surfaceView, reflectView, 0.5);
         reflection = mix(reflection, ssr.rgb, ssr.a);
 #endif
         result = mix(result, reflection, fresnel);
 #ifdef DIM_OVERWORLD
-        // Sun glitter.
+        // Sun glitter. Waves finer than a pixel and distant water widen the highlight instead of breaking it into
+        // single sparkling pixels; the peak is capped for the same reason.
         vec3 l = lightDirection();
-        float spec = ggxSpecular(worldNormal, -normalize(surfacePlayer), l, 0.06);
+        float roughness = 0.06 + min(normalSpread * 1.5, 0.2) + 0.06 * smoothstep(48.0, 400.0, surfaceDist);
+        float spec = min(ggxSpecular(worldNormal, -normalize(surfacePlayer), l, roughness), 6.0);
         result += directLightColor() * spec * smoothstep(0.5, 0.9, sky) * cloudShadow(surfacePlayer, l);
 #endif
+    }
+#endif
+
+#ifdef WATER_FOAM
+    // Broken foam where the water is barely a block deep (puddle films stay clear).
+    if (isEyeInWater == 0 && worldNormal.y > 0.5) {
+        float amount = smoothstep(0.12, 0.3, depthBelow) * (1.0 - smoothstep(0.6, 1.4, depthBelow))
+                * (1.0 - smoothstep(48.0, 96.0, surfaceDist));
+        if (amount > 0.0) {
+#ifdef DIM_OVERWORLD
+            vec3 foamLight = (ambientLightColor() + directLightColor() * saturate(lightDirection().y)) / PI * sky;
+#else
+            vec3 foamLight = vec3(0.05);
+#endif
+            float foam = waterFoam((surfacePlayer + cameraPosition).xz) * amount * 0.35;
+            result = mix(result, foamLight * 0.8, foam);
+        }
     }
 #endif
     return result;
@@ -233,8 +279,9 @@ void main() {
     bool sky = isSkyAt(texcoord);
 
     vec4 waterData = texture(colortex4, texcoord);
+    float normalSpread = length(fwidth(decodeNormal(waterData.xy)));
     if (waterData.w > 0.5) {
-        color = shadeWater(color, surfaceView, waterData, texcoord, noise);
+        color = shadeWater(color, surfaceView, waterData, texcoord, normalSpread);
     }
 
     vec4 translucent = texture(colortex3, texcoord);
@@ -266,6 +313,18 @@ void main() {
     }
     color = applyBlindnessFog(color, sky ? 1000.0 : dist);
     color += lightShafts(texcoord, noise);
+
+#if DEBUG_VIEW == 1
+    // Who drew each pixel: red = vanilla chunks, blue = Distant Horizons LODs, green = water shaded here.
+    // Vanilla land red, vanilla water yellow, DH land blue, DH water cyan; magenta / white = vanilla and DH overlap.
+    float fromVanilla = texture(depthtex0, texcoord).r < 1.0 ? 1.0 : 0.0;
+    float fromDh = 0.0;
+#ifdef DISTANT_HORIZONS
+    fromDh = texture(dhDepthTex0, texcoord).r < 1.0 || texture(dhDepthTex1, texcoord).r < 1.0 ? 1.0 : 0.0;
+#endif
+    float isWater = waterData.w > 0.5 ? 1.0 : 0.0;
+    color = vec3(luminance(color) * 0.3) + vec3(fromVanilla, isWater, fromDh) * 0.5;
+#endif
 
     outColor = vec4(color, 1.0);
     outBloom = vec4(color, 1.0);

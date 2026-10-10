@@ -23,11 +23,23 @@ bool cloudCell(vec2 cell) {
     return n > 1.0 - cloudCoverage();
 }
 
-// Soft occupancy at a world position (bilinear between cells), used for ground shadows.
+// Soft occupancy at a world position (bilinear between cells), used for flat clouds.
 float cloudCover(vec2 worldXZ) {
     vec2 g = (worldXZ + cloudOffset()) / CLOUD_CELL - 0.5;
     vec2 i = floor(g);
     vec2 f = smoothstep(0.25, 0.75, fract(g));
+    float a = cloudCell(i) ? 1.0 : 0.0;
+    float b = cloudCell(i + vec2(1.0, 0.0)) ? 1.0 : 0.0;
+    float c = cloudCell(i + vec2(0.0, 1.0)) ? 1.0 : 0.0;
+    float d = cloudCell(i + vec2(1.0, 1.0)) ? 1.0 : 0.0;
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+// Blurred occupancy for ground shadows: smooth across the whole cell, so a shadow never shows the 12-block grid.
+float cloudShadowCover(vec2 worldXZ) {
+    vec2 g = (worldXZ + cloudOffset()) / CLOUD_CELL - 0.5;
+    vec2 i = floor(g);
+    vec2 f = smoothstep(0.0, 1.0, fract(g));
     float a = cloudCell(i) ? 1.0 : 0.0;
     float b = cloudCell(i + vec2(1.0, 0.0)) ? 1.0 : 0.0;
     float c = cloudCell(i + vec2(0.0, 1.0)) ? 1.0 : 0.0;
@@ -44,7 +56,9 @@ float cloudShadow(vec3 playerPos, vec3 lightDir) {
     }
     float h = 0.5 * (CLOUD_BOTTOM + CLOUD_TOP);
     vec2 p = worldPos.xz + lightDir.xz * ((h - worldPos.y) / lightDir.y);
-    return mix(1.0, 0.3, cloudCover(p));
+    // Light scattered around a small cloud keeps its shadow soft; the shadow fades as the sun gets low.
+    float strength = 0.6 * smoothstep(0.05, 0.3, lightDir.y);
+    return 1.0 - strength * cloudShadowCover(p);
 #else
     return 1.0;
 #endif

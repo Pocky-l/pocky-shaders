@@ -17,10 +17,8 @@ uniform sampler2D colortex7;
 #include "/lib/water.glsl"
 #endif
 
-#ifdef PROG_DH_WATER
+// Vanilla depth: DH has its own depth buffer, so it cannot be depth-tested against vanilla chunks.
 uniform sampler2D depthtex0;
-uniform mat4 dhProjectionInverse;
-#endif
 
 in vec2 lightmap;
 in vec4 vertexColor;
@@ -43,29 +41,28 @@ void main() {
     if (length(playerPos) < min(far * 0.8, far - 32.0)) {
         discard;
     }
+    // Where vanilla chunks drew anything, they are the authority: LODs drawn over them in the overlap ring (flying
+    // high makes it wide) replaced the real sea floor and stacked a second water surface on top of the vanilla one.
+    if (texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).r < 1.0) {
+        discard;
+    }
     vec3 n = normalize(worldNormal);
     vec3 albedo = srgbToLinear(vertexColor.rgb);
     float dist = length(playerPos);
 
 #ifdef PROG_DH_WATER
-    // DH has its own depth buffer: hide its water behind nearer vanilla geometry.
-    float vanillaDepth = texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).r;
-    if (vanillaDepth < 1.0) {
-        vec2 uv = gl_FragCoord.xy / vec2(viewWidth, viewHeight);
-        float vanillaZ = screenToView(vec3(uv, vanillaDepth)).z;
-        float dhZ = projectAndDivide(dhProjectionInverse, vec3(uv, gl_FragCoord.z) * 2.0 - 1.0).z;
-        if (vanillaZ > dhZ) {
-            discard;
-        }
-    }
     // Same water as near the player: composite shades it from this normal, tint and sky light.
     vec3 surfaceNormal = n;
     if (abs(n.y) > 0.5) {
-        surfaceNormal = waterNormal((playerPos + cameraPosition).xz, 0.35);
+        // Broad waves only: fine ripples at LOD distances alias into sparkling pixels.
+        surfaceNormal = waterNormal((playerPos + cameraPosition).xz, 0.35, 0.0);
         surfaceNormal.y *= sign(n.y);
     }
+    // LOD water colour is the averaged texture times the biome tint, darker than the vertex tint of vanilla water:
+    // keep its hue, bring its brightness to vanilla's (default water tint 0x3F76E4 peaks at 0.89).
+    vec3 tint = vertexColor.rgb / max(max(vertexColor.r, max(vertexColor.g, vertexColor.b)), 1e-3) * 0.89;
     outColor = vec4(0.0);
-    outData = vec4(encodeNormal(surfaceNormal), packWater(vertexColor.rgb, max(lightmap.y, 0.8)), 1.0);
+    outData = vec4(encodeNormal(surfaceNormal), packWater(tint, max(lightmap.y, 0.8)), 1.0);
 #else
     // LODs have one flat colour per block, textures average darker and less saturated: match them, and fake the
     // texel pattern near the player (4 texels per block - finer would only shimmer at this distance).
