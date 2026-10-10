@@ -113,12 +113,18 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     amount = max(amount, border);
     if (hazeAmount > 0.0) {
         float mu = dot(dir, lightDirection());
-        vec3 hazeCol = fogCol + directLightColor() * miePhase(mu, 0.6) * 0.05 * (1.0 - rainStrength);
+        vec3 hazeLight = directLightColor();
+        hazeLight = mix(vec3(luminance(hazeLight)), hazeLight, 0.5);
+        vec3 hazeCol = fogCol + hazeLight * miePhase(mu, 0.6) * 0.04 * (1.0 - rainStrength);
         color = mix(color, hazeCol, hazeAmount * (1.0 - saturate(amount)));
     }
     if (dawnAmount > 0.0) {
+        // Soft peach and rose, glowing a little towards the sun - a bright, saturated glow turned the whole land
+        // lemon yellow.
         float mu = dot(dir, sunDir);
-        vec3 dawnCol = fogCol + sunDiscColor() * miePhase(mu, 0.7) * 0.06;
+        vec3 sunGlow = mix(vec3(luminance(sunDiscColor())), sunDiscColor(), 0.4) * vec3(1.0, 0.88, 0.86);
+        vec3 dawnCol = mix(fogCol, vec3(luminance(fogCol)) * vec3(1.06, 0.95, 0.97), 0.5)
+                + sunGlow * miePhase(mu, 0.6) * 0.015;
         color = mix(color, dawnCol, dawnAmount * (1.0 - saturate(amount)));
     }
     color = mix(color, fogCol, saturate(amount));

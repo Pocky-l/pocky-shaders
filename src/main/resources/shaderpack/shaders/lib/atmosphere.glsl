@@ -185,9 +185,10 @@ vec3 lowSunHue(float y) {
     return pow(t / max(max(t.r, t.g), max(t.b, 1e-6)), vec3(0.5));
 }
 
-// How much of the sunset / twilight look there is: from the sun a little above the horizon to about 11 degrees below.
+// How much of the sunset / twilight look there is: strongest with the sun right at the horizon, gone once it is about
+// 9 degrees up (higher, it only tinted the whole morning lemon yellow) or 11 degrees down.
 float twilightAmount(float sunY) {
-    return smoothstep(-0.2, -0.03, sunY) * (1.0 - smoothstep(0.06, 0.3, sunY));
+    return smoothstep(-0.2, -0.03, sunY) * (1.0 - smoothstep(0.02, 0.16, sunY));
 }
 
 // The colours of sunrise and sunset that single scattering alone cannot give (it leaves a thin red line at the
@@ -235,7 +236,7 @@ vec3 skyRadiance(vec3 dir, vec3 sunDir, int steps) {
     vec4 twilight = twilightGlow(dir, sunDir);
     sky *= SKY_RADIANCE_SCALE * (1.0 - twilight.w);
     // The low sun's light reaches the sky through the dusty lower air: richer colour than the clean model gives.
-    sky = max(mix(vec3(luminance(sky)), sky, 1.0 + 0.5 * twilightAmount(sunDir.y)), 0.0);
+    sky = max(mix(vec3(luminance(sky)), sky, 1.0 + 0.35 * twilightAmount(sunDir.y)), 0.0);
     sky += airglow + twilight.rgb;
     if (rainStrength > 0.0) {
         // Below the horizon (reflections, fog looking down) the deck's light is what the ground bounces back.

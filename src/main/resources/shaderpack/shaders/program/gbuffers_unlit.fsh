@@ -36,7 +36,8 @@ void main() {
     #ifdef DIM_OVERWORLD
     // The vanilla (square) sun, as bright and as coloured as the sunlight through the air; the moon as it is.
     if (renderStage == MC_RENDER_STAGE_SUN) {
-        color.rgb = srgbToLinear(color.rgb) * sunDiscColor() * 1.2;
+        // From the texture only its brightness: its yellow edge pixels turned into a saturated yellow frame.
+        color.rgb = vec3(luminance(srgbToLinear(color.rgb))) * sunDiscColor() * 1.2;
     } else {
         color.rgb = srgbToLinear(color.rgb) * (renderStage == MC_RENDER_STAGE_MOON ? 1.6 : 1.0);
     }

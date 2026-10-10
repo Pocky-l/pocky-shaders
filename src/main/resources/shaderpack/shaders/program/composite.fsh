@@ -293,7 +293,10 @@ vec3 lightShafts(vec2 uv, float noise) {
     }
     lit /= float(STEPS);
     float eyeSky = float(eyeBrightnessSmooth.y) / 240.0;
-    return directLightColor() * lit * facing * 0.035 * LIGHT_SHAFT_STRENGTH * eyeSky * (1.0 - rainStrength * 0.8);
+    // Half neutral: the light scattered in the air is paler than the low sun itself (a saturated gold flooded the screen).
+    vec3 light = directLightColor();
+    light = mix(vec3(luminance(light)), light, 0.5);
+    return light * lit * facing * 0.025 * LIGHT_SHAFT_STRENGTH * eyeSky * (1.0 - rainStrength * 0.8);
 #else
     return vec3(0.0);
 #endif
