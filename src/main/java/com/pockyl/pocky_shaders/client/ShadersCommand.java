@@ -10,11 +10,15 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
 import com.pockyl.pocky_shaders.PockyShaders;
+import com.pockyl.pocky_shaders.client.perf.Benchmark;
+import com.pockyl.pocky_shaders.client.perf.PerfMonitor;
 import com.pockyl.pocky_shaders.pack.Preset;
 
 import java.util.function.Supplier;
 
-/** Client command {@code /shaders on|off|toggle|status|preset <low|medium|high|ultra>}. */
+/**
+ * Client command {@code /shaders on|off|toggle|status|preset <low|medium|high|ultra>|perf|bench [stop]}.
+ */
 @EventBusSubscriber(modid = PockyShaders.MOD_ID, value = Dist.CLIENT)
 public final class ShadersCommand {
     private ShadersCommand() {
@@ -32,7 +36,12 @@ public final class ShadersCommand {
                 .then(Commands.literal("off").executes(ctx -> reply(ctx.getSource(), ShaderControl::disable)))
                 .then(Commands.literal("toggle").executes(ctx -> reply(ctx.getSource(), ShaderControl::toggle)))
                 .then(Commands.literal("status").executes(ctx -> reply(ctx.getSource(), ShaderControl::status)))
-                .then(preset));
+                .then(preset)
+                .then(Commands.literal("perf").executes(ctx -> reply(ctx.getSource(), () -> Component.translatable(
+                        PerfMonitor.toggleOverlay() ? "pocky_shaders.perf.shown" : "pocky_shaders.perf.hidden"))))
+                .then(Commands.literal("bench")
+                        .executes(ctx -> reply(ctx.getSource(), Benchmark::start))
+                        .then(Commands.literal("stop").executes(ctx -> reply(ctx.getSource(), Benchmark::stop)))));
     }
 
     private static int reply(CommandSourceStack source, Supplier<Component> action) {

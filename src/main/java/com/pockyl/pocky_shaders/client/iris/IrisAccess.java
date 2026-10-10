@@ -64,9 +64,14 @@ public final class IrisAccess {
         return Iris.getStoredError();
     }
 
-    /** Option values the player changed for the bundled pack (Iris keeps them next to the pack). */
+    /** The file where Iris keeps the option values the player changed for the bundled pack (read on every load). */
+    public static Path ourPackOptionsFile() {
+        return shaderpacksDirectory().resolve(PackInstaller.PACK_NAME + ".txt");
+    }
+
+    /** Option values the player changed for the bundled pack. */
     public static Map<String, String> ourPackOptions() throws IOException {
-        Path file = shaderpacksDirectory().resolve(PackInstaller.PACK_NAME + ".txt");
+        Path file = ourPackOptionsFile();
         Map<String, String> result = new HashMap<>();
         if (Files.isRegularFile(file)) {
             Properties properties = new Properties();
