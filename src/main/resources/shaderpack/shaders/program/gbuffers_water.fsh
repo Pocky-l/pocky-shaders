@@ -33,17 +33,40 @@ void main() {
         n = -n;
     }
 
-    if (blockId == ID_WATER) {
+    if (blockId == ID_WATER || blockId == ID_FLOWING_WATER) {
         vec3 worldPos = playerPos + cameraPosition;
         vec3 wn = n;
-        float waveFade = mix(0.35, 1.0, 1.0 - smoothstep(ANIMATION_DISTANCE * 1.5, ANIMATION_DISTANCE * 2.5, length(playerPos)));
-        if (abs(n.y) > 0.5 && waveFade > 0.0) {
+        float dist = length(playerPos);
+        float waveFade = mix(0.35, 1.0, 1.0 - smoothstep(ANIMATION_DISTANCE * 1.5, ANIMATION_DISTANCE * 2.5, dist));
+        bool side = abs(n.y) <= 0.5;
+        bool running = blockId == ID_FLOWING_WATER || side;
+        if (!side && waveFade > 0.0) {
             // Top (or, seen from below, bottom) of the water: waves, calmer in sheltered water.
-            wn = waterNormal(worldPos.xz, (0.4 + 0.6 * lightmap.y) * waveFade, waterDetail(length(playerPos)));
+            wn = waterNormal(worldPos.xz, (0.4 + 0.6 * lightmap.y) * waveFade, waterDetail(dist));
             wn.y *= sign(n.y);
         }
+        float foam = 0.0;
+        if (running) {
+            // Running water is not a clear pane: the game's flowing water texture already moves along the current
+            // (down a waterfall, downstream on a river), its bright streaks become broken, foamy water and bend the
+            // surface. Waterfalls churn the most.
+            float lum = luminance(texture(gtexture, texcoord).rgb);
+            float streak = smoothstep(0.645, 0.78, lum);
+            float near = 1.0 - smoothstep(24.0, 64.0, dist);
+            vec3 dpdx = dFdx(playerPos);
+            vec3 dpdy = dFdy(playerPos);
+            float h = streak * 0.06 * near;
+            vec3 r1 = cross(dpdy, n);
+            vec3 r2 = cross(n, dpdx);
+            float det = dot(dpdx, r1);
+            if (abs(det) > 1e-8) {
+                vec3 grad = (dFdx(h) * r1 + dFdy(h) * r2) / det;
+                wn = normalize(wn - grad);
+            }
+            foam = side ? 0.3 + 0.55 * streak : 0.08 + 0.45 * streak;
+        }
         outTranslucent = vec4(0.0);
-        outWater = vec4(encodeNormal(wn), packWater(vertexColor.rgb, lightmap.y), 1.0);
+        outWater = vec4(encodeWaterNormal(wn, foam), packWater(vertexColor.rgb, lightmap.y), 1.0);
         return;
     }
 

@@ -101,7 +101,8 @@ float exposure() {
     // grey day brightened up to noon.
     float flash = luminance(flashSkyRadiance()) * OVERCAST_IRRADIANCE;
     float key = (luminance(directLightColor()) * 0.6 + max(luminance(ambientLightColor()) - flash, 0.0)) / PI;
-    float target = 1.75 * mix(1.0, 0.62, rainStrength) * mix(1.0, 0.75, thunderStrength);
+    // Snow keeps the world bright (white ground and air); a thunderstorm in rain is properly dark.
+    float target = 1.75 * mix(1.0, 0.62, rainStrength * (1.0 - 0.7 * snowWeather)) * mix(1.0, 0.5, stormDarkness());
     float outdoor = clamp(pow(target / max(key, 1e-3), 0.5), 0.9, 3.2);
 #else
     float outdoor = 1.0;

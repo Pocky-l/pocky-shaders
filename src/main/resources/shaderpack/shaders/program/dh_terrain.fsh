@@ -64,7 +64,7 @@ void main() {
     // keep its hue, bring its brightness to vanilla's (default water tint 0x3F76E4 peaks at 0.89).
     vec3 tint = vertexColor.rgb / max(max(vertexColor.r, max(vertexColor.g, vertexColor.b)), 1e-3) * 0.89;
     outColor = vec4(0.0);
-    outData = vec4(encodeNormal(surfaceNormal), packWater(tint, max(lightmap.y, 0.8)), 1.0);
+    outData = vec4(encodeWaterNormal(surfaceNormal, 0.0), packWater(tint, max(lightmap.y, 0.8)), 1.0);
 #else
     // LODs have one flat colour per block, textures average darker and less saturated: match them, and fake the
     // texel pattern near the player (4 texels per block - finer would only shimmer at this distance).

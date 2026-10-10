@@ -19,7 +19,7 @@ layout(location = 0) out vec4 outTint;
 
 void main() {
     vec4 color = texture(gtexture, texcoord) * vertexColor;
-    if (blockId == ID_WATER) {
+    if (blockId == ID_WATER || blockId == ID_FLOWING_WATER) {
         // Light keeps most of its strength through shallow water and takes on its colour.
         outTint = vec4(mix(vec3(1.0), srgbToLinearApprox(vertexColor.rgb), 0.45) * 0.9, 1.0);
         return;

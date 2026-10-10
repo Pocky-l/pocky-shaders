@@ -1,6 +1,6 @@
 """Prints the prepare pass' light colours (direct, ambient, zenith sky) for several sun elevations.
 
-Usage: python tools/preview/light_values.py [rain] [thunder]
+Usage: python tools/preview/light_values.py [rain] [thunder] [snow]
 Also prints the horizon sky, and "seen" = key x the exposure composite1 applies (how bright the scene looks).
 """
 import math
@@ -46,6 +46,7 @@ VERT = 'in vec2 pos; void main() { gl_Position = vec4(pos, 0.0, 1.0); }'
 def main():
     rain = float(sys.argv[1]) if len(sys.argv) > 1 else 0.0
     thunder = float(sys.argv[2]) if len(sys.argv) > 2 else 0.0
+    snow = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
     ctx = moderngl.create_standalone_context()
     prog = ctx.program(vertex_shader='#version 330 compatibility\n' + VERT,
                        fragment_shader='#version 330 compatibility\n' + expand(FRAG))
@@ -53,6 +54,8 @@ def main():
         prog['rainStrength'].value = rain
     if 'thunderStrength' in prog:
         prog['thunderStrength'].value = thunder
+    if 'snowWeather' in prog:
+        prog['snowWeather'].value = snow
     quad = ctx.buffer(np.array([-1, -1, 1, -1, -1, 1, 1, 1], dtype='f4').tobytes())
     vao = ctx.vertex_array(prog, [(quad, '2f', 'pos')])
     tex = ctx.texture((4, 1), 4, dtype='f4')
@@ -65,7 +68,7 @@ def main():
         vao.render(moderngl.TRIANGLE_STRIP)
         d = np.frombuffer(tex.read(), dtype='f4').reshape(4, 4)
         key = (lum(d[0]) * 0.6 + lum(d[1])) / math.pi
-        target = 1.75 * (1.0 - 0.38 * rain) * (1.0 - 0.25 * thunder)
+        target = 1.75 * (1.0 - 0.38 * rain * (1.0 - 0.7 * snow)) * (1.0 - 0.5 * thunder * (1.0 - snow))
         seen = key * min(max(math.sqrt(target / max(key, 1e-3)), 0.9), 3.2)
         print(f'sun {deg:4d}: direct {np.round(d[0][:3], 3)} ambient {np.round(d[1][:3], 3)} '
               f'zenith {np.round(d[2][:3], 3)} horizon {np.round(d[3][:3], 3)} key {key:.4f} seen {seen:.3f}')

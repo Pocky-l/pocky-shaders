@@ -4,7 +4,9 @@
 // Optical depth of the air over a distance: clear haze, plus rain that starts a little away from the player (the
 // air right around you stays clear, the curtain builds up beyond it). rainSheets scales the rain part.
 float fogOpticalDepth(float dist, float rainSheets) {
-    return FOG_DENSITY * (0.00035 * dist + rainStrength * 0.0045 * rainSheets * max(dist - 16.0, 0.0));
+    // Falling snow hides the distance more than rain, a blizzard turns it into a white-out.
+    float snow = 1.0 + snowWeather * (0.4 + 1.4 * thunderStrength);
+    return FOG_DENSITY * (0.00035 * dist + rainStrength * 0.0045 * snow * rainSheets * max(dist - 16.0, 0.0));
 }
 
 // Heavier and lighter sheets of rain sweeping across the land with the wind: rain density along a view ray, read

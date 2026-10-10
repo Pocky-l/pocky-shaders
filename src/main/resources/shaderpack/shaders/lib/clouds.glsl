@@ -109,7 +109,7 @@ vec3 cloudFaceLight(vec3 n, vec3 lightDir, vec3 directColor, vec3 ambientColor) 
     // darker sky read as holes in it. Grey like vanilla's rain clouds, darker still in a thunderstorm. The overcast
     // ambient / pi is about 1.15 x the zenith radiance of the sky.
     float rainFace = n.y > 0.5 ? 1.1 : (n.y < -0.5 ? 0.5 : 0.66);
-    vec3 overcast = vec3(luminance(ambientColor)) / (PI * 1.15) * rainFace * mix(1.0, 0.7, thunderStrength);
+    vec3 overcast = vec3(luminance(ambientColor)) / (PI * 1.15) * rainFace * mix(1.0, 0.7, stormDarkness());
     return mix(clear, overcast, rainStrength);
 }
 

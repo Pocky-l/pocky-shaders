@@ -20,6 +20,8 @@ uniform float frameTimeCounter;
 uniform float rainStrength;
 uniform float wetness;
 uniform float thunderStrength;
+// Custom uniform (shaders.properties): 1 while it snows at the camera instead of raining, eased over a few seconds.
+uniform float snowWeather;
 // Iris: a lightning bolt relative to the camera, w = 1 while one exists.
 uniform vec4 lightningBoltPosition;
 uniform float viewWidth;
@@ -63,6 +65,7 @@ const int ID_LILY = 10006;          // lily pads and other plants floating on wa
 const int ID_EMISSIVE = 10010;      // blocks that emit light
 const int ID_EMISSIVE_PLANT = 10011;
 const int ID_WATER = 10020;
+const int ID_FLOWING_WATER = 10024;
 const int ID_ICE = 10021;
 const int ID_GLASS = 10022;
 const int ID_LAVA = 10023;
@@ -76,6 +79,12 @@ vec2 saturate(vec2 x) { return clamp(x, 0.0, 1.0); }
 vec3 saturate(vec3 x) { return clamp(x, 0.0, 1.0); }
 vec4 saturate(vec4 x) { return clamp(x, 0.0, 1.0); }
 float sqr(float x) { return x * x; }
+
+// How dark the weather is: a thunderstorm in rain is dark; the same weather in snow is a blizzard, a bright white-out.
+float stormDarkness() { return thunderStrength * (1.0 - snowWeather); }
+
+// How hard it snows (0 in rain).
+float snowfall() { return rainStrength * snowWeather; }
 float luminance(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
 vec3 projectAndDivide(mat4 m, vec3 p) {
@@ -136,6 +145,26 @@ float valueNoise(vec2 p) {
     float c = hash12(i + vec2(0.0, 1.0));
     float d = hash12(i + vec2(1.0, 1.0));
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+// Water normal and foam in two 16-bit channels of colortex4: each channel holds 14 bits of the octahedral normal and
+// 2 bits of the 4-bit foam amount (0..1).
+vec2 encodeWaterNormal(vec3 n, float foam) {
+    vec2 q = floor(encodeNormal(n) * 16383.0 + 0.5);
+    float f = floor(saturate(foam) * 15.0 + 0.5);
+    float high = floor(f / 4.0);
+    return (q * 4.0 + vec2(high, f - high * 4.0)) / 65535.0;
+}
+
+vec3 decodeWaterNormal(vec2 data) {
+    vec2 v = floor(data * 65535.0 + 0.5);
+    return decodeNormal(floor(v / 4.0) / 16383.0);
+}
+
+float decodeWaterFoam(vec2 data) {
+    vec2 v = floor(data * 65535.0 + 0.5);
+    vec2 bits = v - floor(v / 4.0) * 4.0;
+    return (bits.x * 4.0 + bits.y) / 15.0;
 }
 
 // Water tint and sky light packed into one 16-bit channel (4 bits each) of colortex4.

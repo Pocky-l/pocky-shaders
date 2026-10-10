@@ -111,7 +111,8 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise) {
 
 // normalSpread: screen-space change of the water normal per pixel (taken outside any branch).
 vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float normalSpread) {
-    vec3 worldNormal = decodeNormal(waterData.xy);
+    vec3 worldNormal = decodeWaterNormal(waterData.xy);
+    float runningFoam = decodeWaterFoam(waterData.xy);
     vec4 tintSky = unpackWater(waterData.z);
     vec3 tint = tintSky.rgb;
     float sky = tintSky.a;
@@ -237,6 +238,17 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     }
 #endif
 
+    if (runningFoam > 0.0 && isEyeInWater == 0) {
+        // Streams and waterfalls: white, broken water lit by the sky and the sun.
+#ifdef DIM_OVERWORLD
+        vec3 foamLight = (ambientLightColor() + directLightColor() * saturate(dot(worldNormal, lightDirection()))) / PI * sky;
+#else
+        vec3 foamLight = vec3(0.05);
+#endif
+        foamLight += blockLightColor() * 0.02;
+        result = mix(result, foamLight * 0.85, runningFoam * 0.75);
+    }
+
 #ifdef WATER_FOAM
     // Broken foam where the water is barely a block deep (puddle films stay clear), whitecaps on open water in a storm.
     if (isEyeInWater == 0 && worldNormal.y > 0.5 && !puddle) {
@@ -300,7 +312,7 @@ void main() {
     vec3 withClouds = color;
 
     vec4 waterData = texture(colortex4, texcoord);
-    float normalSpread = length(fwidth(decodeNormal(waterData.xy)));
+    float normalSpread = length(fwidth(decodeWaterNormal(waterData.xy)));
     if (waterData.w > 0.5) {
         color = shadeWater(color, surfaceView, waterData, texcoord, normalSpread);
     }

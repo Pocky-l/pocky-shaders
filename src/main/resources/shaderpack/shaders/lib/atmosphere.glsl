@@ -142,13 +142,16 @@ vec3 flashSkyRadiance() {
 }
 
 // Overcast sky: brightness relative to the zenith value. Rain: a softened CIE overcast sky (the horizon darker than
-// the zenith, never a glowing band). Thunderstorm: heavy and dark overhead, lighter towards the horizon where light
-// comes in from under the edge of the storm (scaled to light the ground the same).
+// the zenith, never a glowing band). Thunderstorm: dark down to the horizon, so the distance disappears into a dark
+// haze rather than a white one. Blizzard: the same brightness everywhere, a white-out. All scaled to the same
+// cos-weighted mean (0.818), so they light the ground the same.
 float overcastShape(float elevation) {
     float e = saturate(elevation);
     float rain = (1.0 + 1.2 * e) / 2.2;
-    float storm = (0.62 + 0.55 * pow(1.0 - e, 3.0)) * (0.818 / 0.675);
-    return mix(rain, storm, thunderStrength);
+    // cos-weighted mean of (1 - e)^2 is 1/6: 0.9 - 0.35 / 6 = 0.842.
+    float storm = (0.9 - 0.35 * sqr(1.0 - e)) * (0.818 / 0.842);
+    float shape = mix(rain, storm, stormDarkness());
+    return mix(shape, 0.818, snowWeather * thunderStrength);
 }
 
 // cos-weighted mean of overcastShape over the sky, x the ambient's multiple scattering factor (1.4) x pi.
@@ -165,10 +168,13 @@ float clearDaylight(vec3 sunDir) {
     return day + night;
 }
 
-// Zenith radiance of the overcast deck: rain lets about a fifth of the daylight through, a thunderstorm a tenth.
+// Zenith radiance of the overcast deck: rain lets about a fifth of the daylight through, a thunderstorm about a
+// fourteenth. Snow clouds are thinner and the white ground lights them from below: a snowy sky stays bright and
+// neutral white, in a blizzard too.
 vec3 overcastZenith(vec3 sunDir) {
-    float through = mix(0.2, 0.1, thunderStrength);
-    vec3 tint = mix(vec3(0.93, 0.97, 1.05), vec3(0.8, 0.87, 1.0), thunderStrength);
+    float through = mix(mix(0.2, 0.07, stormDarkness()), 0.3, snowWeather);
+    vec3 tint = mix(vec3(0.93, 0.97, 1.05), vec3(0.78, 0.85, 1.0), stormDarkness());
+    tint = mix(tint, vec3(0.97, 0.99, 1.03), snowWeather);
     return tint * clearDaylight(sunDir) * through / OVERCAST_IRRADIANCE + flashSkyRadiance();
 }
 
