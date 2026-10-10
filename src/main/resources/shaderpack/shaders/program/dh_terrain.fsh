@@ -13,6 +13,9 @@ uniform sampler2D colortex7;
 #include "/lib/clouds.glsl"
 #endif
 #include "/lib/lighting.glsl"
+#ifdef PROG_DH_WATER
+#include "/lib/water.glsl"
+#endif
 
 #ifdef PROG_DH_WATER
 uniform sampler2D depthtex0;
@@ -56,7 +59,11 @@ void main() {
         }
     }
     // Same water as near the player: composite shades it from this normal, tint and sky light.
-    vec3 surfaceNormal = abs(n.y) > 0.5 ? vec3(0.0, sign(n.y), 0.0) : n;
+    vec3 surfaceNormal = n;
+    if (abs(n.y) > 0.5) {
+        surfaceNormal = waterNormal((playerPos + cameraPosition).xz, 0.35);
+        surfaceNormal.y *= sign(n.y);
+    }
     outColor = vec4(0.0);
     outData = vec4(encodeNormal(surfaceNormal), packWater(vertexColor.rgb, max(lightmap.y, 0.8)), 1.0);
 #else
