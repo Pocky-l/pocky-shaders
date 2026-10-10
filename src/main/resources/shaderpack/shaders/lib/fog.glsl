@@ -58,8 +58,16 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
         // A touch thicker in the cool morning and evening air, thinner around noon.
         float humidity = mix(1.25, 0.85, smoothstep(0.15, 0.6, sunDir.y));
         // Rain fog takes over in rain: the layers would only stack into milk.
-        float hazeDensity = 0.0016 * LOW_HAZE * banks * humidity * (1.0 - rainStrength);
-        hazeAmount = (1.0 - exp(-dist * hazeDensity * clamp(hazeHeight, 0.0, 6.0))) * smoothstep(0.05, 0.6, eyeSky);
+        float weather = LOW_HAZE * banks * humidity * (1.0 - rainStrength);
+        float seaHaze = dist * 0.0018 * weather * clamp(hazeHeight, 0.0, 6.0);
+        // Surface haze: a thin layer of air lying on the land and water wherever they are (hills included). A ray
+        // crosses about SURFACE_LAYER / |dir.y| blocks of it before reaching the surface, so it gathers on far
+        // ground and water seen at a shallow angle, and stays thin right around the player and looking down from
+        // high up - land and sea fade into a soft veil with distance, the hills stand out against it.
+        const float SURFACE_LAYER = 12.0;
+        float layerPath = min(dist, SURFACE_LAYER / max(abs(dir.y), 0.01));
+        float surfaceHaze = layerPath * 0.0012 * weather * smoothstep(16.0, 160.0, dist);
+        hazeAmount = (1.0 - exp(-(seaHaze + surfaceHaze))) * smoothstep(0.05, 0.6, eyeSky);
     }
 
 #ifdef VALLEY_MIST
@@ -86,7 +94,7 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     amount = max(amount, border);
     if (hazeAmount > 0.0) {
         float mu = dot(dir, lightDirection());
-        vec3 hazeCol = fogCol + directLightColor() * miePhase(mu, 0.6) * 0.04 * (1.0 - rainStrength);
+        vec3 hazeCol = fogCol + directLightColor() * miePhase(mu, 0.6) * 0.05 * (1.0 - rainStrength);
         color = mix(color, hazeCol, hazeAmount * (1.0 - saturate(amount)));
     }
     color = mix(color, fogCol, saturate(amount));
