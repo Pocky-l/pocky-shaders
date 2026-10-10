@@ -1,0 +1,69 @@
+// Pack options. Every "// [...]" list is an option Iris shows in the shader pack menu; profiles in
+// shaders.properties set them together (Low / Medium / High / Ultra).
+
+#define QUALITY 1 // [0 1 2 3]
+
+// Lighting
+#define SHADOWS
+const int shadowMapResolution = 2048; // [1024 1536 2048 3072 4096]
+const float shadowDistance = 128.0; // [64.0 96.0 128.0 160.0 192.0 256.0]
+#define SHADOW_SOFTNESS 1.0 // [0.5 0.75 1.0 1.5 2.0 3.0]
+#define COLORED_SHADOWS
+#define SSAO
+#define SSAO_STRENGTH 1.0 // [0.5 0.75 1.0 1.25 1.5 2.0]
+#define HANDHELD_LIGHT
+#define BLOCK_LIGHT_WARMTH 1.0 // [0.0 0.5 1.0 1.5]
+#define AMBIENT_MIN 0.012 // [0.0 0.006 0.012 0.025 0.05]
+
+// Nature
+#define WAVING_PLANTS
+#define WAVING_LEAVES
+#define WIND_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.25 1.5 2.0]
+#define FOLIAGE_TRANSLUCENCY
+#define WET_SURFACES
+
+// Water
+#define WATER_REFLECTIONS 2 // [0 1 2]
+#define WATER_REFRACTION
+#define WATER_WAVE_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
+#define WATER_CLARITY 1.0 // [0.5 0.75 1.0 1.5 2.0]
+
+// Sky
+#define CLOUDS 2 // [0 1 2]
+#define CLOUD_COVERAGE 1.0 // [0.5 0.75 1.0 1.25 1.5]
+#define LIGHT_SHAFTS
+#define LIGHT_SHAFT_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
+#define FOG_DENSITY 1.0 // [0.0 0.25 0.5 0.75 1.0 1.5 2.0]
+#define VALLEY_MIST
+
+// Post processing
+#define BLOOM
+#define BLOOM_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
+#define EXPOSURE 1.0 // [0.6 0.8 1.0 1.2 1.4 1.6]
+#define SATURATION 1.0 // [0.6 0.8 0.9 1.0 1.1 1.2 1.4]
+#define WARMTH 1.0 // [0.0 0.5 1.0 1.5 2.0]
+#define FXAA
+
+const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 30.0 40.0]
+
+#if QUALITY == 0
+    #define SHADOW_SAMPLES 4
+    #define SSAO_SAMPLES 4
+    #define SSR_STEPS 0
+    #define SKY_STEPS 6
+#elif QUALITY == 1
+    #define SHADOW_SAMPLES 8
+    #define SSAO_SAMPLES 6
+    #define SSR_STEPS 16
+    #define SKY_STEPS 8
+#elif QUALITY == 2
+    #define SHADOW_SAMPLES 12
+    #define SSAO_SAMPLES 8
+    #define SSR_STEPS 24
+    #define SKY_STEPS 10
+#else
+    #define SHADOW_SAMPLES 16
+    #define SSAO_SAMPLES 12
+    #define SSR_STEPS 32
+    #define SKY_STEPS 12
+#endif
