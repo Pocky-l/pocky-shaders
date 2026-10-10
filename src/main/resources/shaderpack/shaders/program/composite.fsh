@@ -118,6 +118,17 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     vec3 viewNormal = mat3(gbufferModelView) * worldNormal;
     vec3 viewDir = normalize(surfaceView);
     vec3 surfacePlayer = mat3(gbufferModelViewInverse) * surfaceView;
+    // Rain puddles (Petrichor draws them as water a hair above the ground; real water is at least 0.89 blocks deep):
+    // still water with rings from the drops instead of waves, no caustics or foam.
+    bool puddle = false;
+    if (isEyeInWater == 0 && !isOpaqueSkyAt(uv)) {
+        vec3 groundBelow = mat3(gbufferModelViewInverse) * viewPosition(uv, true);
+        puddle = surfacePlayer.y - groundBelow.y < 0.25;
+    }
+    if (puddle) {
+        worldNormal = puddleNormal((surfacePlayer + cameraPosition).xz, length(surfacePlayer), sky);
+        viewNormal = mat3(gbufferModelView) * worldNormal;
+    }
 
     // Refraction: look up the scene below with an offset from the waves, unless that lands in front of the water.
     vec2 refractUv = uv;
@@ -149,7 +160,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 
 #if defined WATER_CAUSTICS && defined DIM_OVERWORLD
     // Sunlight focused by the waves draws moving bright veins on a shallow, sunlit bottom.
-    if (isEyeInWater == 0 && !floorIsSky) {
+    if (isEyeInWater == 0 && !floorIsSky && !puddle) {
         float fade = smoothstep(0.2, 0.7, depthBelow) * (1.0 - smoothstep(3.0, 9.0, depthBelow))
                 * (1.0 - smoothstep(32.0, 96.0, length(floorPlayer)));
         if (fade > 0.0) {
@@ -228,7 +239,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 
 #ifdef WATER_FOAM
     // Broken foam where the water is barely a block deep (puddle films stay clear), whitecaps on open water in a storm.
-    if (isEyeInWater == 0 && worldNormal.y > 0.5) {
+    if (isEyeInWater == 0 && worldNormal.y > 0.5 && !puddle) {
         float amount = smoothstep(0.12, 0.3, depthBelow) * (1.0 - smoothstep(0.6, 1.4, depthBelow))
                 * (1.0 - smoothstep(48.0, 96.0, surfaceDist));
         float whitecaps = depthBelow > 2.0 ? waterWhitecaps((surfacePlayer + cameraPosition).xz) * 0.55

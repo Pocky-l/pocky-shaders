@@ -15,6 +15,53 @@ float waterHeight(vec2 p, float detail) {
     return h;
 }
 
+// Rings spreading from rain drops on a still puddle (the same pattern as Petrichor's own puddle shader). One drop per
+// half-block cell and cycle, a share of the cells active by how hard it rains; each drop leaves a small dimple and a
+// ring that widens to about half a block with a couple of crests, fading as it grows. Returns the surface slope.
+vec2 rainRipples(vec2 p, float time, float amount) {
+    const float CELL = 0.5;
+    vec2 q = p / CELL;
+    vec2 cell = floor(q);
+    vec2 slope = vec2(0.0);
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 c = cell + vec2(float(x), float(y));
+            float period = 0.8 + hash12(c + 17.0) * 0.7;
+            float t = time / period + hash12(c);
+            float cycle = floor(t);
+            float age = fract(t);
+            if (hash12(c + vec2(mod(cycle, 61.0) * 7.0, 3.0)) > amount) {
+                continue;
+            }
+            vec2 center = c + 0.15 + 0.7 * vec2(hash12(c + vec2(mod(cycle, 53.0) * 0.37, 5.0)),
+                    hash12(c + vec2(9.0, mod(cycle, 47.0) * 0.53)));
+            vec2 d = (q - center) * CELL;
+            float dist = length(d);
+            float s0 = dist - age * 0.6;
+            const float WIDTH = 0.045;
+            const float K = 6.2832 / 0.05;
+            float bell = exp(-s0 * s0 / (WIDTH * WIDTH));
+            float dh = bell * (-2.0 * s0 / (WIDTH * WIDTH) * cos(K * s0) - K * sin(K * s0));
+            float fade = (1.0 - age) * (1.0 - age);
+            float dimple = exp(-dist * dist / 0.0016) * (1.0 - smoothstep(0.0, 0.12, age)) * -2.0 * dist / 0.0016;
+            slope += (dh * 0.0045 * fade + dimple * 0.004) * d / (dist + 1e-4);
+        }
+    }
+    return slope;
+}
+
+// Normal of a rain puddle: still water, with rings from the drops where rain reaches it. Rings smaller than a pixel
+// only shimmer, so they fade out in the distance.
+vec3 puddleNormal(vec2 worldXZ, float dist, float skyLight) {
+    float near = rainStrength * smoothstep(0.7, 0.95, skyLight) * (1.0 - smoothstep(12.0, 40.0, dist));
+    if (near <= 0.0) {
+        return vec3(0.0, 1.0, 0.0);
+    }
+    float amount = saturate(rainStrength * 0.75 + thunderStrength * 0.25);
+    vec2 slope = rainRipples(worldXZ, frameTimeCounter, amount) * near;
+    return normalize(vec3(-slope.x, 1.0, -slope.y));
+}
+
 // Share of the fine ripples kept at a distance from the camera.
 float waterDetail(float dist) {
     return 1.0 - smoothstep(16.0, 72.0, dist);
