@@ -60,13 +60,13 @@ float sceneViewZ(vec2 uv) {
 // Simplified shadows beyond the shadow map: march towards the light through the depth buffer.
 // Catches hills, trees and buildings on screen, which is what makes distant land look solid.
 float screenSpaceShadow(vec3 viewPos, vec3 viewLight, float noise) {
-    float dist = length(viewPos);
-    float stepLen = dist * 0.01 + 0.25;
+    // World-space steps (not scaled by the distance to the camera), so the shadows stay put when the camera moves.
+    float stepLen = 0.6;
     vec3 p = viewPos + viewLight * stepLen * noise;
-    const int STEPS = 16;
+    const int STEPS = 20;
     for (int i = 0; i < STEPS; i++) {
         p += viewLight * stepLen;
-        stepLen *= 1.18;
+        stepLen *= 1.25;
         if (p.z > -near) {
             break;
         }
