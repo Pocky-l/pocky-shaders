@@ -6,6 +6,7 @@
 #ifdef DIM_OVERWORLD
 uniform sampler2D colortex7;
 #include "/lib/sky.glsl"
+#define CLOUD_LOOKUP
 #include "/lib/clouds.glsl"
 #endif
 #include "/lib/lighting.glsl"
@@ -20,7 +21,7 @@ uniform sampler2D depthtex1;
 uniform sampler2D dhDepthTex0;
 uniform sampler2D dhDepthTex1;
 uniform mat4 dhProjectionInverse;
-uniform float dhRenderDistance;
+uniform int dhRenderDistance;
 #endif
 
 in vec2 texcoord;
@@ -160,7 +161,8 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
         reflectWorld.y = abs(reflectWorld.y);
         vec3 skyRefl = sampleSkyLut(reflectWorld, sunDirection());
 #if CLOUDS > 0 && QUALITY > 0
-        vec4 clouds = cloudLayers(reflectWorld, sunDirection(), lightDirection(), directLightColor(), ambientLightColor());
+        vec4 clouds = cloudLayers(reflectWorld, 1e6, lightDirection(), directLightColor(), ambientLightColor(), CLOUD_STEPS / 2,
+                noise);
         skyRefl = skyRefl * clouds.a + clouds.rgb;
 #endif
         reflection = skyRefl * smoothstep(0.3, 0.85, sky);
@@ -243,7 +245,7 @@ void main() {
         color = mix(color, vec3(0.75, 0.82, 0.9), 1.0 - exp(-dist * 0.7));
     } else if (!sky) {
 #ifdef DISTANT_HORIZONS
-        float renderDistance = max(far, dhRenderDistance);
+        float renderDistance = max(far, float(dhRenderDistance));
 #else
         float renderDistance = far;
 #endif

@@ -8,6 +8,11 @@ uniform sampler2D colortex7;
 #endif
 #include "/lib/lighting.glsl"
 
+#ifdef PROG_DH_WATER
+uniform sampler2D depthtex0;
+uniform mat4 dhProjectionInverse;
+#endif
+
 in vec2 lightmap;
 in vec4 vertexColor;
 in vec3 playerPos;
@@ -33,6 +38,16 @@ void main() {
     vec3 albedo = srgbToLinear(vertexColor.rgb);
 
 #ifdef PROG_DH_WATER
+    // DH has its own depth buffer: hide its water behind nearer vanilla geometry.
+    float vanillaDepth = texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).r;
+    if (vanillaDepth < 1.0) {
+        vec2 uv = gl_FragCoord.xy / vec2(viewWidth, viewHeight);
+        float vanillaZ = screenToView(vec3(uv, vanillaDepth)).z;
+        float dhZ = projectAndDivide(dhProjectionInverse, vec3(uv, gl_FragCoord.z) * 2.0 - 1.0).z;
+        if (vanillaZ > dhZ) {
+            discard;
+        }
+    }
     vec3 v = -normalize(playerPos);
     float f = fresnelSchlick(dot(v, n), 0.02);
     Lights lights = frameLights();

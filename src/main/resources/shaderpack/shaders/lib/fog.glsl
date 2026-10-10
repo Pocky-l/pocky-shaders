@@ -2,7 +2,7 @@
 // Needs common, atmosphere and sky.
 
 float fogDensity() {
-    return FOG_DENSITY * (0.0009 + rainStrength * 0.0045);
+    return FOG_DENSITY * (0.00035 + rainStrength * 0.0045);
 }
 
 // Fog for a surface at playerPos (relative to the camera). Returns the scene colour with fog applied.

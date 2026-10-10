@@ -2,6 +2,11 @@
 // PROG_EMISSIVE (spider eyes, beacon beam), PROG_GLINT, PROG_DAMAGE, PROG_WEATHER.
 
 #include "/lib/common.glsl"
+#if defined PROG_SKYTEXTURED && defined DIM_OVERWORLD
+#include "/lib/atmosphere.glsl"
+uniform sampler2D colortex7;
+#include "/lib/sky.glsl"
+#endif
 
 uniform sampler2D gtexture;
 uniform int renderStage;
@@ -29,11 +34,12 @@ void main() {
 #elif defined PROG_SKYTEXTURED
     vec4 color = texture(gtexture, texcoord) * vertexColor;
     #ifdef DIM_OVERWORLD
-    // Our own sun is drawn in the deferred pass; the moon keeps its vanilla texture.
+    // The vanilla (square) sun, as bright and as coloured as the sunlight through the air; the moon as it is.
     if (renderStage == MC_RENDER_STAGE_SUN) {
-        discard;
+        color.rgb = srgbToLinear(color.rgb) * sunDiscColor() * 2.5;
+    } else {
+        color.rgb = srgbToLinear(color.rgb) * (renderStage == MC_RENDER_STAGE_MOON ? 1.6 : 1.0);
     }
-    color.rgb = srgbToLinear(color.rgb) * (renderStage == MC_RENDER_STAGE_MOON ? 1.6 : 1.0);
     #else
     color.rgb = srgbToLinear(color.rgb);
     #endif

@@ -1,10 +1,11 @@
-// Applies ambient occlusion to the opaque scene and draws the sky (atmosphere, sun, clouds, stars) behind it.
+// Applies ambient occlusion to the opaque scene, draws the sky behind it and volumetric clouds over both.
 
 #include "/lib/common.glsl"
 #include "/lib/atmosphere.glsl"
 #ifdef DIM_OVERWORLD
 uniform sampler2D colortex7;
 #include "/lib/sky.glsl"
+#define CLOUD_LOOKUP
 #include "/lib/clouds.glsl"
 #endif
 
@@ -14,6 +15,7 @@ uniform sampler2D colortex6;
 uniform sampler2D depthtex0;
 #ifdef DISTANT_HORIZONS
 uniform sampler2D dhDepthTex0;
+uniform mat4 dhProjectionInverse;
 #endif
 
 in vec2 texcoord;
@@ -43,42 +45,45 @@ void main() {
     float depth = texture(depthtex0, texcoord).r;
     bool sky = depth >= 1.0;
 #ifdef DISTANT_HORIZONS
-    sky = sky && texture(dhDepthTex0, texcoord).r >= 1.0;
+    float dhDepth = texture(dhDepthTex0, texcoord).r;
+    sky = sky && dhDepth >= 1.0;
 #endif
 
+    vec3 color = scene.rgb;
     if (!sky) {
 #ifdef SSAO
         if (depth < 1.0) {
             float encoded = texture(colortex1, texcoord).z * 65535.0;
             int material = int(floor(encoded / 256.0 + 1e-3));
             float ao = blurredAo(depth);
-            scene.rgb *= material == MAT_HAND ? 1.0 : ao;
+            color *= material == MAT_HAND ? 1.0 : ao;
         }
 #endif
-        outColor = vec4(scene.rgb, 1.0);
-        return;
     }
 
 #ifdef DIM_OVERWORLD
-    vec3 viewDir = normalize(screenToView(vec3(texcoord, 1.0)));
-    vec3 dir = normalize(mat3(gbufferModelViewInverse) * viewDir);
+    vec3 viewPos = screenToView(vec3(texcoord, sky ? 1.0 : depth));
+#ifdef DISTANT_HORIZONS
+    if (!sky && depth >= 1.0) {
+        viewPos = projectAndDivide(dhProjectionInverse, vec3(texcoord, dhDepth) * 2.0 - 1.0);
+    }
+#endif
+    vec3 dir = normalize(mat3(gbufferModelViewInverse) * viewPos);
+    float sceneDist = sky ? 1e6 : length(viewPos);
     vec3 sunDir = sunDirection();
-    vec3 color = sampleSkyLut(dir, sunDir);
 
-    // Sun disc with a soft limb.
-    float cosSun = dot(dir, sunDir);
-    float disc = smoothstep(0.99985, 0.99993, cosSun);
-    color += sunDiscColor() * disc * 6.0;
-
-    // Stars and the moon from the vanilla sky programs, faded by the bright day sky.
-    color += scene.rgb * (1.0 - rainStrength);
+    if (sky) {
+        // Atmosphere behind the vanilla sun, moon and stars (drawn additively into colortex0).
+        color = sampleSkyLut(dir, sunDir) + scene.rgb * (1.0 - rainStrength);
+    }
 
 #if CLOUDS > 0
-    vec4 clouds = cloudLayers(dir, sunDir, lightDirection(), directLightColor(), ambientLightColor());
-    color = color * clouds.a + clouds.rgb;
+    if (sky || cameraPosition.y > CLOUD_BOTTOM - 40.0 || dir.y > 0.0) {
+        vec4 clouds = cloudLayers(dir, sceneDist, lightDirection(), directLightColor(), ambientLightColor(), CLOUD_STEPS,
+                dither(gl_FragCoord.xy));
+        color = color * clouds.a + clouds.rgb;
+    }
+#endif
 #endif
     outColor = vec4(color, 1.0);
-#else
-    outColor = vec4(scene.rgb, 1.0);
-#endif
 }

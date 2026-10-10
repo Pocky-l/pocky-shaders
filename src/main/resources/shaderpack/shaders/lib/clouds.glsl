@@ -1,7 +1,18 @@
-// Two flat cloud layers: soft cumulus at low altitude and thin cirrus streaks high above.
+// Volumetric cumulus clouds in a slab of the sky, plus thin cirrus streaks high above (a flat layer).
+//
+// The cloud shape is a 2D map of column heights: each column is a puffy dome with a flat base, eroded by 3D noise.
+// The prepare pass bakes the map for the area around the camera into colortex7 (one fetch per march step instead of
+// a full noise stack); the deferred pass marches through the slab.
 
-const float CLOUD_LOW_ALTITUDE = 250.0;
+const float CLOUD_BOTTOM = 210.0;
+const float CLOUD_TOP = 330.0;
 const float CLOUD_HIGH_ALTITUDE = 900.0;
+
+// Cloud map in colortex7, next to the sky table: 256 x 256 texels covering CLOUD_MAP_SPAN blocks around the camera.
+const ivec2 CLOUD_MAP_ORIGIN = ivec2(66, 1);
+const int CLOUD_MAP_SIZE = 256;
+const float CLOUD_MAP_SPAN = 4096.0;
+const float CLOUD_MAP_TEXEL = CLOUD_MAP_SPAN / float(CLOUD_MAP_SIZE);
 
 float cloudFbm(vec2 p, int octaves) {
     float v = 0.0;
@@ -19,63 +30,160 @@ float cloudCoverage() {
     return saturate(0.42 * CLOUD_COVERAGE + rainStrength * 0.4);
 }
 
-float lowCloudDensity(vec2 p, int octaves) {
-    vec2 drift = vec2(frameTimeCounter * 1.2, frameTimeCounter * 0.4);
-    float shape = cloudFbm((p + drift) * 0.0024, octaves);
-    float coverage = cloudCoverage();
-    return saturate((shape - (1.0 - coverage)) / max(coverage, 0.05) * 1.6);
+vec2 cloudDrift() {
+    return vec2(frameTimeCounter * 2.0, frameTimeCounter * 0.7);
 }
 
-// rgb: cloud light, a: transmittance of the sky behind them.
-vec4 cloudLayers(vec3 dir, vec3 sunDir, vec3 lightDir, vec3 directColor, vec3 ambientColor) {
-    vec3 result = vec3(0.0);
+// World xz of the map's centre, snapped to whole texels so the baked shapes do not swim as the camera moves.
+vec2 cloudMapCenter() {
+    return floor(cameraPosition.xz / CLOUD_MAP_TEXEL) * CLOUD_MAP_TEXEL;
+}
+
+// Column height of the clouds at world xz (0 = no cloud, 1 = up to the slab top). Used by the prepare pass.
+float cloudColumn(vec2 worldXZ) {
+    vec2 p = (worldXZ + cloudDrift()) * 0.0011;
+    float shape = cloudFbm(p, 6);
+    float coverage = cloudCoverage();
+    float c = saturate((shape - (1.0 - coverage)) / max(coverage, 0.05) * 1.8);
+    return c * (0.55 + 0.45 * valueNoise(p * 0.37 + 3.1));
+}
+
+float cloudNoise3(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    vec3 u = f * f * (3.0 - 2.0 * f);
+    float n = i.x + i.y * 57.0 + i.z * 113.0;
+    vec4 a = vec4(n, n + 1.0, n + 57.0, n + 58.0);
+    vec4 h0 = fract(sin(a) * 43758.5453);
+    vec4 h1 = fract(sin(a + 113.0) * 43758.5453);
+    vec4 h = mix(h0, h1, u.z);
+    return mix(mix(h.x, h.y, u.x), mix(h.z, h.w, u.x), u.y);
+}
+
+#ifdef CLOUD_LOOKUP
+
+float sampleCloudColumn(vec2 worldXZ) {
+    vec2 local = (worldXZ - cloudMapCenter()) / CLOUD_MAP_SPAN + 0.5;
+    if (any(lessThan(local, vec2(0.0))) || any(greaterThan(local, vec2(1.0)))) {
+        return 0.0;
+    }
+    vec2 texel = vec2(CLOUD_MAP_ORIGIN) + 0.5 + local * float(CLOUD_MAP_SIZE - 1);
+    return texture(colortex7, texel / vec2(viewWidth, viewHeight)).r;
+}
+
+// Cloud density at a world position; detail adds the 3D erosion that makes edges billow.
+float cloudDensity(vec3 worldPos, bool detail) {
+    float h = (worldPos.y - CLOUD_BOTTOM) / (CLOUD_TOP - CLOUD_BOTTOM);
+    if (h < 0.0 || h > 1.0) {
+        return 0.0;
+    }
+    float column = sampleCloudColumn(worldPos.xz);
+    if (column <= 0.0) {
+        return 0.0;
+    }
+    // Flat base, rounded dome towards the column top.
+    float d = saturate((column - h) * 5.0) * smoothstep(0.0, 0.08, h);
+    if (detail && d > 0.0) {
+        vec3 q = (worldPos + vec3(cloudDrift().x, 0.0, cloudDrift().y)) * 0.045;
+        float erosion = cloudNoise3(q) * 0.65 + cloudNoise3(q * 2.7) * 0.35;
+        d = saturate(d - erosion * (0.55 - 0.35 * h) * (1.0 - d * 0.6));
+    }
+    return d;
+}
+
+float cloudPhase(float mu) {
+    // Strong forward lobe (silver lining) plus a soft backward one.
+    return mix(miePhase(mu, -0.15), miePhase(mu, 0.7), 0.6) * 4.0 * PI;
+}
+
+// Volumetric clouds along a world-space ray from the camera, up to maxDist.
+// rgb: in-scattered light, a: transmittance of what is behind.
+vec4 volumetricClouds(vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, vec3 ambientColor, int steps, float noise) {
+    vec3 origin = cameraPosition;
+    if (abs(dir.y) < 1e-4) {
+        return vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    float tb = (CLOUD_BOTTOM - origin.y) / dir.y;
+    float tt = (CLOUD_TOP - origin.y) / dir.y;
+    float t0 = max(min(tb, tt), 0.0);
+    float t1 = min(max(tb, tt), min(maxDist, 6000.0));
+    if (t1 <= t0) {
+        return vec4(0.0, 0.0, 0.0, 1.0);
+    }
+
+    float stepLen = (t1 - t0) / float(steps);
+    float mu = dot(dir, lightDir);
+    float phase = cloudPhase(mu);
+    vec3 overcast = mix(vec3(1.0), vec3(0.5), rainStrength);
+    vec3 sunLight = directColor / PI * phase;
+    vec3 skyLight = ambientColor / PI;
+
+    vec3 scattered = vec3(0.0);
     float transmittance = 1.0;
-#if CLOUDS > 0
+    float t = t0 + stepLen * noise;
+    for (int i = 0; i < steps; i++) {
+        vec3 p = origin + dir * t;
+        float d = cloudDensity(p, true);
+        if (d > 0.01) {
+            float sigma = d * 0.07;
+            // Optical depth towards the light, a few coarse samples.
+            float od = 0.0;
+            for (int j = 1; j <= 3; j++) {
+                float s = float(j * j) * 9.0;
+                od += cloudDensity(p + lightDir * s, false) * (float(j) * 2.0 - 1.0) * 9.0;
+            }
+            od *= 0.07;
+            // Beer with a softened tail standing in for multiple scattering; powder darkens thin sun-facing edges less.
+            float beer = max(exp(-od), exp(-od * 0.25) * 0.7);
+            float powder = 1.0 - exp(-d * 6.0);
+            float h = (p.y - CLOUD_BOTTOM) / (CLOUD_TOP - CLOUD_BOTTOM);
+            vec3 light = sunLight * beer * mix(0.6, 1.0, powder) + skyLight * (0.35 + 0.65 * h);
+            float stepTransmittance = exp(-sigma * stepLen);
+            scattered += light * overcast * transmittance * (1.0 - stepTransmittance);
+            transmittance *= stepTransmittance;
+            if (transmittance < 0.03) {
+                break;
+            }
+        }
+        t += stepLen;
+    }
+    // Far clouds sink into the haze.
+    float fade = exp(-t0 * 0.00035);
+    return vec4(scattered * fade, mix(1.0, transmittance, fade));
+}
+
+// Thin, high cirrus streaks.
+vec4 cirrusClouds(vec3 dir, vec3 lightDir, vec3 directColor, vec3 ambientColor) {
     if (dir.y <= 0.0) {
         return vec4(0.0, 0.0, 0.0, 1.0);
     }
-    float mu = dot(dir, lightDir);
-    float forward = 1.0 + 2.5 * pow(saturate(mu), 10.0);
-    vec3 overcast = mix(vec3(1.0), vec3(0.55), rainStrength);
+    float t = (CLOUD_HIGH_ALTITUDE - cameraPosition.y) / dir.y;
+    vec2 p = cameraPosition.xz + dir.xz * t;
+    float streak = cloudFbm(vec2((p.x + frameTimeCounter * 3.0) * 0.0006, p.y * 0.0025), 4);
+    float a = saturate((streak - 0.52) * 2.2) * 0.45 * (1.0 - rainStrength * 0.6) * smoothstep(0.0, 0.12, dir.y);
+    float forward = 1.0 + 2.5 * pow(saturate(dot(dir, lightDir)), 10.0);
+    vec3 lit = directColor * 0.08 * forward + ambientColor * 0.35;
+    return vec4(lit * a * mix(vec3(1.0), vec3(0.55), rainStrength), 1.0 - a);
+}
 
+// All cloud layers in front of a surface at maxDist (use a large value for the sky).
+vec4 cloudLayers(vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, vec3 ambientColor, int steps, float noise) {
+    vec3 result = vec3(0.0);
+    float transmittance = 1.0;
+#if CLOUDS > 0
 #if CLOUDS > 1
-    {
-        float t = (CLOUD_HIGH_ALTITUDE - cameraPosition.y) / dir.y;
-        vec2 p = cameraPosition.xz + dir.xz * t;
-        vec2 drift = vec2(frameTimeCounter * 3.0, 0.0);
-        float streak = cloudFbm(vec2((p.x + drift.x) * 0.0006, p.y * 0.0025), 4);
-        float d = saturate((streak - 0.52) * 2.2) * 0.45 * (1.0 - rainStrength * 0.6);
-        float fade = smoothstep(0.0, 0.12, dir.y);
-        float a = d * fade;
-        vec3 lit = directColor * 0.08 * forward + ambientColor * 0.35;
-        result += lit * a * overcast;
-        transmittance *= 1.0 - a;
+    if (maxDist > 5000.0 && cameraPosition.y < CLOUD_HIGH_ALTITUDE) {
+        vec4 cirrus = cirrusClouds(dir, lightDir, directColor, ambientColor);
+        result = cirrus.rgb;
+        transmittance = cirrus.a;
     }
 #endif
-
-    {
-        float t = (CLOUD_LOW_ALTITUDE - cameraPosition.y) / dir.y;
-        if (t > 0.0) {
-            vec2 p = cameraPosition.xz + dir.xz * t;
-            int octaves = QUALITY >= 2 ? 6 : 5;
-            float d = lowCloudDensity(p, octaves);
-            if (d > 0.0) {
-                // Light reaching this point from the sun, sampled a little towards it.
-                vec2 towards = lightDir.xz / max(lightDir.y, 0.15) * 25.0;
-                float d1 = lowCloudDensity(p + towards, 4);
-                float d2 = lowCloudDensity(p + towards * 2.5, 3);
-                float lightPath = d1 * 1.4 + d2 * 0.9;
-                float beer = exp(-lightPath * 2.2);
-                float powder = 1.0 - exp(-d * 4.0);
-                vec3 sunLit = directColor * beer * powder * forward * 0.22;
-                vec3 skyLit = ambientColor * (0.42 - 0.18 * d);
-                float fade = smoothstep(0.0, 0.08, dir.y) * exp(-t * 0.00012);
-                float a = saturate(d * 1.5) * fade;
-                result = mix(result, (sunLit + skyLit) * overcast, a);
-                transmittance *= 1.0 - a;
-            }
-        }
-    }
+    vec4 cumulus = volumetricClouds(dir, maxDist, lightDir, directColor, ambientColor, steps, noise);
+    // Cumulus are below the cirrus: they cover them.
+    result = result * cumulus.a + cumulus.rgb;
+    transmittance *= cumulus.a;
 #endif
     return vec4(result, transmittance);
 }
+
+#endif
