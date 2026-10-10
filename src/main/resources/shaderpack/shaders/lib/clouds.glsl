@@ -105,6 +105,16 @@ vec3 cloudFaceLight(vec3 n, vec3 lightDir, vec3 directColor, vec3 ambientColor) 
     // others too.
     float sun = 0.35 + 0.65 * saturate(dot(n, lightDir));
     vec3 clear = (ambientColor * 1.05 + directColor * sun) / PI * face;
+    // High up the clouds still catch the low sun when the land is already in its shadow: at sunset and through the
+    // twilight they glow orange and pink.
+    vec3 sunDir = sunDirection();
+    float twilight = smoothstep(-0.12, -0.02, sunDir.y) * (1.0 - smoothstep(0.04, 0.25, sunDir.y));
+    if (twilight > 0.0) {
+        // Saturated, so the glow stays orange and pink instead of washing out to cream.
+        vec3 hue = lowSunHue(sunDir.y + 0.03);
+        vec3 glow = hue * hue * SUN_ILLUMINANCE * 0.09 * twilight;
+        clear += glow * (0.35 + 0.65 * saturate(dot(n, sunDir))) / PI * face;
+    }
     // Under rain only the grey sky lights them, and they must stay darker than it from below - lighter clouds on a
     // darker sky read as holes in it. Grey like vanilla's rain clouds, darker still in a thunderstorm. The overcast
     // ambient / pi is about 1.15 x the zenith radiance of the sky.

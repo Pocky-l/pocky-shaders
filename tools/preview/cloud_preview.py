@@ -21,6 +21,8 @@ FRAG = '''
 #include "/lib/common.glsl"
 #include "/lib/atmosphere.glsl"
 #include "/lib/tonemap.glsl"
+uniform sampler2D colortex7;
+#include "/lib/sky.glsl"
 #include "/lib/clouds.glsl"
 uniform vec3 previewSun;
 uniform float previewPitch;
@@ -115,6 +117,11 @@ def main():
     sun = (0.35, math.sin(elevation), math.cos(elevation))
     n = math.sqrt(sum(x * x for x in sun))
     prog['previewSun'].value = tuple(x / n for x in sun)
+    # sunDirection() = gbufferModelViewInverse x sunPosition: identity matrix, sun position along the preview sun.
+    if 'sunPosition' in prog:
+        prog['sunPosition'].value = tuple(100.0 * x / n for x in sun)
+    if 'gbufferModelViewInverse' in prog:
+        prog['gbufferModelViewInverse'].value = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
     for name, value in (('rainStrength', rain), ('thunderStrength', thunder), ('viewWidth', W), ('viewHeight', H),
                         ('frameTimeCounter', 100.0)):
         if name in prog:

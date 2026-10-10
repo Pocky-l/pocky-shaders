@@ -30,7 +30,12 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
 #ifdef DIM_OVERWORLD
     vec3 sunDir = sunDirection();
     vec3 fogDir = normalize(vec3(dir.x, max(dir.y, 0.04), dir.z));
-    vec3 fogCol = sampleSkyLut(fogDir, sunDir);
+    // Hazy air spreads the glow around a low sun over a wide span: the fog takes the sky colour over a broad fan of
+    // directions, so the land under a setting sun does not get a bright wedge like a reflection.
+    const float FAN = 0.6;
+    vec3 fanLeft = vec3(fogDir.x * cos(FAN) - fogDir.z * sin(FAN), fogDir.y, fogDir.x * sin(FAN) + fogDir.z * cos(FAN));
+    vec3 fanRight = vec3(fogDir.x * cos(FAN) + fogDir.z * sin(FAN), fogDir.y, -fogDir.x * sin(FAN) + fogDir.z * cos(FAN));
+    vec3 fogCol = sampleSkyLut(fogDir, sunDir) * 0.6 + (sampleSkyLut(fanLeft, sunDir) + sampleSkyLut(fanRight, sunDir)) * 0.2;
 
     // Indoors and underground the sky colour should not leak in.
     float eyeSky = float(eyeBrightnessSmooth.y) / 240.0;

@@ -178,13 +178,44 @@ vec3 overcastZenith(vec3 sunDir) {
     return tint * clearDaylight(sunDir) * through / OVERCAST_IRRADIANCE + flashSkyRadiance();
 }
 
+// Hue of sunlight that has crossed the air at elevation sine y (brightest channel 1): white high up, golden, then
+// orange and red towards the horizon; softened like adaptedTint.
+vec3 lowSunHue(float y) {
+    vec3 t = exp(-((RAYLEIGH_BETA + OZONE_PER_RAYLEIGH) * RAYLEIGH_HEIGHT + MIE_BETA * 1.11 * MIE_HEIGHT) * airMass(max(y, 0.0)));
+    return pow(t / max(max(t.r, t.g), max(t.b, 1e-6)), vec3(0.5));
+}
+
+// How much of the sunset / twilight look there is: from the sun a little above the horizon to about 11 degrees below.
+float twilightAmount(float sunY) {
+    return smoothstep(-0.2, -0.03, sunY) * (1.0 - smoothstep(0.06, 0.3, sunY));
+}
+
+// The wide glow of sunset and twilight. Single scattering alone leaves a thin red line at the horizon under a grey
+// sky; light scattered many times spreads it into a broad warm arch over the setting sun, with the pinker glow of the
+// Belt of Venus on the opposite side of the sky.
+vec3 twilightGlow(vec3 dir, vec3 sunDir) {
+    float amount = twilightAmount(sunDir.y);
+    if (amount <= 0.0) {
+        return vec3(0.0);
+    }
+    float la = length(dir.xz);
+    float lb = length(sunDir.xz);
+    float toward = (la > 1e-4 && lb > 1e-4) ? 0.5 + 0.5 * dot(dir.xz / la, sunDir.xz / lb) : 0.5;
+    float height = exp(-max(dir.y, 0.0) / mix(0.12, 0.24, toward));
+    vec3 arch = lowSunHue(sunDir.y + 0.04);
+    vec3 belt = vec3(0.85, 0.55, 0.7) * 0.35;
+    // Overhead the twilight sky deepens into the blue hour (ozone absorption, which single scattering underplays).
+    vec3 blueHour = vec3(0.1, 0.3, 1.0) * 0.012 * smoothstep(0.0, 0.6, dir.y);
+    return (mix(belt, arch, toward * toward) * height * 0.07 + blueHour) * amount;
+}
+
 // Full sky radiance (sun + moon scattering + faint airglow), in world space directions; rain blends in the overcast
 // deck.
 vec3 skyRadiance(vec3 dir, vec3 sunDir, int steps) {
     vec3 sky = scatterAlong(dir, sunDir, vec3(SUN_ILLUMINANCE), steps);
     sky += scatterAlong(dir, -sunDir, MOON_TINT * MOON_ILLUMINANCE * moonPhaseLight(), steps / 2 + 1);
     vec3 airglow = vec3(0.0016, 0.0022, 0.0038) * (1.0 + 2.0 * saturate(dir.y));
-    sky = sky * SKY_RADIANCE_SCALE + airglow;
+    sky = sky * SKY_RADIANCE_SCALE + airglow + twilightGlow(dir, sunDir);
     if (rainStrength > 0.0) {
         // Below the horizon (reflections, fog looking down) the deck's light is what the ground bounces back.
         float shape = dir.y >= 0.0 ? overcastShape(dir.y) : overcastShape(0.0) * 0.8;
