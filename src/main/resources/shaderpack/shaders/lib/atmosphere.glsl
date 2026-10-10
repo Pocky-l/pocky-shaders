@@ -14,10 +14,16 @@ const float MIE_G = 0.8;
 const vec3 OZONE_PER_RAYLEIGH = vec3(1.2e-3, 3.5e-3, 0.16e-3) / RAYLEIGH_HEIGHT * 8.0;
 
 const float SUN_ILLUMINANCE = 10.0;
-const float MOON_ILLUMINANCE = 0.8;
+const float MOON_ILLUMINANCE = 0.5;
 // Single scattering alone leaves the sky too dim next to sunlit ground; this stands in for multiple scattering.
 const float SKY_RADIANCE_SCALE = 1.8;
-const vec3 MOON_TINT = vec3(0.62, 0.74, 1.0);
+const vec3 MOON_TINT = vec3(0.78, 0.85, 1.0);
+
+// Moon brightness by phase (0 = full moon ... 4 = new moon).
+float moonPhaseLight() {
+    float lit = abs(float(moonPhase) - 4.0) / 4.0;
+    return mix(0.15, 1.0, lit);
+}
 
 // Rain fills the air with droplets (more Mie haze) and greys the sky out.
 float hazeFactor() {
@@ -109,7 +115,7 @@ vec3 rainGrey(vec3 color) {
 // Full sky radiance (sun + moon scattering + faint airglow), in world space directions.
 vec3 skyRadiance(vec3 dir, vec3 sunDir, int steps) {
     vec3 sky = scatterAlong(dir, sunDir, vec3(SUN_ILLUMINANCE), steps);
-    sky += scatterAlong(dir, -sunDir, MOON_TINT * MOON_ILLUMINANCE, steps / 2 + 1);
+    sky += scatterAlong(dir, -sunDir, MOON_TINT * MOON_ILLUMINANCE * moonPhaseLight(), steps / 2 + 1);
     sky = sky * SKY_RADIANCE_SCALE + vec3(0.0016, 0.0022, 0.0038) * (1.0 + 2.0 * saturate(dir.y));
     return rainGrey(sky);
 }

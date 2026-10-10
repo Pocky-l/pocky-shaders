@@ -157,7 +157,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
         vec3 reflectView = reflect(viewDir, viewNormal);
         // A thin water film on dark ground reads mostly as reflection: shallow water gets a stronger sheen.
         float shallow = 1.0 - smoothstep(0.1, 0.8, waterDist);
-        float fresnel = fresnelSchlick(dot(-viewDir, viewNormal), mix(0.02, 0.09, shallow));
+        float fresnel = fresnelSchlick(dot(-viewDir, viewNormal), mix(0.02, 0.05, shallow));
         vec3 reflection = vec3(0.0);
 #ifdef DIM_OVERWORLD
         vec3 reflectWorld = mat3(gbufferModelViewInverse) * reflectView;

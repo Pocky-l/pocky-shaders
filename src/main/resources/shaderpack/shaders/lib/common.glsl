@@ -30,6 +30,7 @@ uniform float darknessFactor;
 uniform float screenBrightness;
 
 uniform int worldTime;
+uniform int moonPhase;
 uniform int isEyeInWater;
 uniform int heldBlockLightValue;
 uniform int heldBlockLightValue2;

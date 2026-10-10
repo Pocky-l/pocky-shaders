@@ -12,6 +12,15 @@ uniform sampler2D colortex7;
 uniform sampler2D colortex0;
 uniform sampler2D colortex1;
 uniform sampler2D colortex6;
+uniform sampler2D colortex8;
+uniform mat4 gbufferPreviousModelView;
+uniform mat4 gbufferPreviousProjection;
+uniform vec3 previousCameraPosition;
+
+/*
+const int colortex8Format = RGBA16F;
+const bool colortex8Clear = false;
+*/
 uniform sampler2D depthtex0;
 #ifdef DISTANT_HORIZONS
 uniform sampler2D dhDepthTex0;
@@ -20,8 +29,9 @@ uniform mat4 dhProjectionInverse;
 
 in vec2 texcoord;
 
-/* RENDERTARGETS: 0 */
+/* RENDERTARGETS: 0,8 */
 layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outClouds;
 
 float blurredAo(float depth) {
     vec2 px = 1.0 / vec2(viewWidth, viewHeight);
@@ -77,13 +87,29 @@ void main() {
         color = sampleSkyLut(dir, sunDir) + scene.rgb * (1.0 - rainStrength);
     }
 
+    vec4 clouds = vec4(0.0, 0.0, 0.0, 1.0);
 #if CLOUDS > 0
     if (sky || cameraPosition.y > CLOUD_BOTTOM - 40.0 || dir.y > 0.0) {
-        vec4 clouds = cloudLayers(dir, sceneDist, lightDirection(), directLightColor(), ambientLightColor(), CLOUD_STEPS,
-                hash12(gl_FragCoord.xy + float(frameCounter % 1024) * 7.31));
+        clouds = cloudLayers(dir, sceneDist, lightDirection(), directLightColor(), ambientLightColor(), CLOUD_STEPS,
+                dither(gl_FragCoord.xy));
+
+        // Where was this bit of cloud last frame? (Clouds are far: a point a typical cloud distance along the ray.)
+        float cloudDist = min(sceneDist, dir.y > 0.05 ? (0.5 * (CLOUD_BOTTOM + CLOUD_TOP) - cameraPosition.y) / dir.y : 2000.0);
+        vec3 prevRel = cameraPosition + dir * max(cloudDist, 50.0) - previousCameraPosition;
+        vec4 prevClip = gbufferPreviousProjection * (gbufferPreviousModelView * vec4(prevRel, 1.0));
+        vec2 prevUv = prevClip.xy / prevClip.w * 0.5 + 0.5;
+        if (prevClip.w > 0.0 && all(greaterThanEqual(prevUv, vec2(0.0))) && all(lessThanEqual(prevUv, vec2(1.0)))) {
+            vec4 history = texture(colortex8, prevUv);
+            float moved = length(cameraPosition - previousCameraPosition);
+            float keep = mix(0.88, 0.4, saturate(moved / 3.0));
+            clouds = mix(clouds, history, keep);
+        }
         color = color * clouds.a + clouds.rgb;
     }
 #endif
+    outClouds = clouds;
+#else
+    outClouds = vec4(0.0, 0.0, 0.0, 1.0);
 #endif
     outColor = vec4(color, 1.0);
 }

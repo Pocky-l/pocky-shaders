@@ -40,8 +40,10 @@ vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliag
         return vec3(1.0);
     }
     coord.z -= 0.00004 * distort;
+    float edge = smoothstep(0.65, 0.95, max(abs(clip.x), abs(clip.y)));
 
     float softness = (0.045 * SHADOW_SOFTNESS + 0.5 * texelBlocks) / (2.0 * shadowDistance) / distort;
+    softness *= sunDirection().y < 0.0 ? 2.2 : 1.0;
     float phi = noise * 2.0 * PI;
     float solid = 0.0;
     float total = 0.0;
@@ -59,11 +61,11 @@ vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliag
     if (solid - total > 0.01) {
         // Light passing through translucent blocks: shadowcolor0 holds their tint (already 1 where nothing is).
         vec4 tint = texture(shadowcolor0, coord.xy);
-        return mix(vec3(total), tint.rgb * solid, saturate((solid - total) / max(solid, 1e-3)));
+        return mix(mix(vec3(total), tint.rgb * solid, saturate((solid - total) / max(solid, 1e-3))), vec3(1.0), edge);
     }
-    return vec3(total);
+    return vec3(mix(total, 1.0, edge));
 #else
-    return vec3(solid);
+    return vec3(mix(solid, 1.0, edge));
 #endif
 }
 

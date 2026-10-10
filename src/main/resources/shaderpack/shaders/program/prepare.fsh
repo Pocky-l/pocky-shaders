@@ -45,7 +45,7 @@ void main() {
         vec3 value;
         if (pixel.x == PIXEL_LIGHT_COLOR.x) {
             vec3 sun = SUN_ILLUMINANCE * directTransmittance(sunDir.y);
-            vec3 moon = MOON_ILLUMINANCE * MOON_TINT * directTransmittance(-sunDir.y);
+            vec3 moon = MOON_ILLUMINANCE * moonPhaseLight() * MOON_TINT * directTransmittance(-sunDir.y);
             value = (sun + moon) * (1.0 - rainStrength * 0.88) * (1.0 - thunderStrength * 0.9);
         } else if (pixel.x == PIXEL_AMBIENT_COLOR.x) {
             value = max(ambientIrradiance(sunDir), vec3(0.05, 0.06, 0.08) * (1.0 + rainStrength * 0.6));
