@@ -83,6 +83,10 @@ float sqr(float x) { return x * x; }
 // How dark the weather is: a thunderstorm in rain is dark; the same weather in snow is a blizzard, a bright white-out.
 float stormDarkness() { return thunderStrength * (1.0 - snowWeather); }
 
+// The game's Brightness option (0 = Moody, 0.5 = default, 1 = Bright) as a factor on the darkest light: like vanilla
+// it lifts dark places, from about half to about twice the default.
+float brightnessLift() { return mix(0.5, 2.0, screenBrightness) / 1.25; }
+
 // How hard it snows (0 in rain).
 float snowfall() { return rainStrength * snowWeather; }
 float luminance(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }

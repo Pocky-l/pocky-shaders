@@ -102,12 +102,15 @@ float exposure() {
     float flash = luminance(flashSkyRadiance()) * OVERCAST_IRRADIANCE;
     float key = (luminance(directLightColor()) * 0.6 + max(luminance(ambientLightColor()) - flash, 0.0)) / PI;
     // Snow keeps the world bright (white ground and air); a thunderstorm in rain is properly dark.
-    float target = 1.75 * mix(1.0, 0.62, rainStrength * (1.0 - 0.7 * snowWeather)) * mix(1.0, 0.5, stormDarkness());
+    float target = 1.75 * mix(1.0, 0.62, rainStrength * (1.0 - 0.7 * snowWeather)) * mix(1.0, 0.36, stormDarkness());
     float outdoor = clamp(pow(target / max(key, 1e-3), 0.5), 0.9, 3.2);
 #else
     float outdoor = 1.0;
 #endif
-    return EXPOSURE * mix(1.0, outdoor, eyeSky);
+    // Away from the sky (caves, deep inside buildings) the eye adapts to the dark as well; the Brightness option sets
+    // how far.
+    float cave = mix(1.5, 2.8, screenBrightness);
+    return EXPOSURE * mix(cave, outdoor, eyeSky);
 }
 
 void main() {

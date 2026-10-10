@@ -115,9 +115,12 @@ vec3 shade(Surface s, Lights lights, float noise) {
     float groundView = foliage ? 0.35 : 0.5 - 0.5 * s.normal.y;
     ambient += lights.direct * saturate(l.y) * 0.15 * vec3(0.95, 1.0, 0.85) * groundView / PI * skyFalloff;
 
-    ambient += vec3(AMBIENT_MIN) * vec3(0.8, 0.9, 1.1) + nightVision * vec3(0.25);
+    ambient += vec3(AMBIENT_MIN) * vec3(0.8, 0.9, 1.1) * brightnessLift() + nightVision * vec3(0.25);
 
-    vec3 block = blockLightColor() * (blockLightCurve(s.lightmap.x) + handLight(s.playerPos));
+    // The Brightness option also lifts weak block light the way vanilla's gamma does, so torches reach farther into
+    // the dark at higher settings (1 - (1 - x)^3 at most halfway).
+    float blockLevel = mix(s.lightmap.x, 1.0 - pow(1.0 - s.lightmap.x, 3.0), 0.5 * screenBrightness);
+    vec3 block = blockLightColor() * (blockLightCurve(blockLevel) + handLight(s.playerPos));
 
     vec3 direct = vec3(0.0);
     vec3 sheen = vec3(0.0);

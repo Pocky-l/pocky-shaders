@@ -68,7 +68,7 @@ def main():
         vao.render(moderngl.TRIANGLE_STRIP)
         d = np.frombuffer(tex.read(), dtype='f4').reshape(4, 4)
         key = (lum(d[0]) * 0.6 + lum(d[1])) / math.pi
-        target = 1.75 * (1.0 - 0.38 * rain * (1.0 - 0.7 * snow)) * (1.0 - 0.5 * thunder * (1.0 - snow))
+        target = 1.75 * (1.0 - 0.38 * rain * (1.0 - 0.7 * snow)) * (1.0 - 0.64 * thunder * (1.0 - snow))
         seen = key * min(max(math.sqrt(target / max(key, 1e-3)), 0.9), 3.2)
         print(f'sun {deg:4d}: direct {np.round(d[0][:3], 3)} ambient {np.round(d[1][:3], 3)} '
               f'zenith {np.round(d[2][:3], 3)} horizon {np.round(d[3][:3], 3)} key {key:.4f} seen {seen:.3f}')

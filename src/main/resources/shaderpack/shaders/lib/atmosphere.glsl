@@ -169,10 +169,10 @@ float clearDaylight(vec3 sunDir) {
 }
 
 // Zenith radiance of the overcast deck: rain lets about a fifth of the daylight through, a thunderstorm about a
-// fourteenth. Snow clouds are thinner and the white ground lights them from below: a snowy sky stays bright and
+// twentieth. Snow clouds are thinner and the white ground lights them from below: a snowy sky stays bright and
 // neutral white, in a blizzard too.
 vec3 overcastZenith(vec3 sunDir) {
-    float through = mix(mix(0.2, 0.07, stormDarkness()), 0.3, snowWeather);
+    float through = mix(mix(0.2, 0.045, stormDarkness()), 0.3, snowWeather);
     vec3 tint = mix(vec3(0.93, 0.97, 1.05), vec3(0.78, 0.85, 1.0), stormDarkness());
     tint = mix(tint, vec3(0.97, 0.99, 1.03), snowWeather);
     return tint * clearDaylight(sunDir) * through / OVERCAST_IRRADIANCE + flashSkyRadiance();
