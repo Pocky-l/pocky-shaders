@@ -44,7 +44,8 @@ vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliag
 
     float softness = (0.045 * SHADOW_SOFTNESS + 0.5 * texelBlocks) / (2.0 * shadowDistance) / distort;
     softness *= sunDirection().y < 0.0 ? 2.2 : 1.0;
-    float phi = noise * 2.0 * PI;
+    // A fixed sample pattern: per-pixel random rotation looked like grain without temporal filtering.
+    float phi = 0.0;
     float solid = 0.0;
     float total = 0.0;
     int samples = length(playerPos) > DETAIL_DISTANCE ? max(SHADOW_SAMPLES / 2, 2) : SHADOW_SAMPLES;

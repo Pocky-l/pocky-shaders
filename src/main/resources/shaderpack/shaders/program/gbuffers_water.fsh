@@ -33,12 +33,6 @@ void main() {
         n = -n;
     }
 
-#ifdef DISTANT_HORIZONS
-    float edgeFade = smoothstep(far - 28.0, far - 4.0, length(playerPos));
-    if (edgeFade > 0.0 && hash12(floor(gl_FragCoord.xy)) < edgeFade) {
-        discard;
-    }
-#endif
     if (blockId == ID_WATER) {
         vec3 worldPos = playerPos + cameraPosition;
         vec3 wn = n;

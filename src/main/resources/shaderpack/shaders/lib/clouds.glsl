@@ -60,9 +60,8 @@ vec3 cloudFaceLight(vec3 n, vec3 lightDir, vec3 directColor, vec3 ambientColor) 
 }
 
 // Clouds along a world-space ray from the camera up to maxDist. rgb: cloud light, a: transmittance behind.
-vec4 cloudLayers(vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, vec3 ambientColor, int steps, float noise) {
+vec4 cloudLayersFrom(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, vec3 ambientColor, int steps) {
 #if CLOUDS > 0
-    vec3 origin = cameraPosition;
     float t0;
     float t1;
     if (abs(dir.y) < 1e-5) {
@@ -150,4 +149,8 @@ vec4 cloudLayers(vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, vec3 
 #else
     return vec4(0.0, 0.0, 0.0, 1.0);
 #endif
+}
+
+vec4 cloudLayers(vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, vec3 ambientColor, int steps, float noise) {
+    return cloudLayersFrom(cameraPosition, dir, maxDist, lightDir, directColor, ambientColor, steps);
 }

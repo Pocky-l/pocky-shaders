@@ -5,6 +5,10 @@
 #ifdef DIM_OVERWORLD
 uniform sampler2D colortex7;
 #include "/lib/sky.glsl"
+#ifndef PROG_DH_WATER
+#define SHADOW_LOOKUP
+#include "/lib/shadow.glsl"
+#endif
 #define CLOUD_LOOKUP
 #include "/lib/clouds.glsl"
 #endif

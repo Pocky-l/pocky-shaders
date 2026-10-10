@@ -120,7 +120,7 @@ void main() {
         float farWeight = smoothstep(0.65, 0.95, max(abs(shadowClip.x), abs(shadowClip.y)));
         vec3 viewLight = normalize(shadowLightPosition);
         if (farWeight > 0.0 && material != MAT_HAND) {
-            float occluded = screenSpaceShadow(viewPos, viewLight, dither(gl_FragCoord.xy));
+            float occluded = screenSpaceShadow(viewPos, viewLight, 0.5);
             if (occluded > 0.0) {
                 vec3 n = decodeNormal(data.xy);
                 float skyLight = mod(encoded, 256.0) / 255.0;

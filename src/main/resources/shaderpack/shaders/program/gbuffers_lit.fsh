@@ -43,12 +43,6 @@ void main() {
     if (color.a < alphaTestRef) {
         discard;
     }
-#if defined PROG_TERRAIN && defined DISTANT_HORIZONS
-    float edgeFade = smoothstep(far - 28.0, far - 4.0, length(playerPos));
-    if (edgeFade > 0.0 && hash12(floor(gl_FragCoord.xy)) < edgeFade) {
-        discard;
-    }
-#endif
 #if defined PROG_ENTITIES
     color.rgb = mix(color.rgb, entityColor.rgb, entityColor.a);
 #endif
