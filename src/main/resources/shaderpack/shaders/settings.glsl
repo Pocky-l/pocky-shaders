@@ -56,6 +56,43 @@ const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0
 // Debug: 1 = colour each pixel by who drew it (vanilla chunks / Distant Horizons / water).
 #define DEBUG_VIEW 0 // [0 1]
 
+// Iris lists a boolean option in its menu only when some file tests it with #ifdef (a "#if defined X && ..." test
+// does not count, and several options are only tested that way). These empty tests make every one of them show.
+#ifdef SHADOWS
+#endif
+#ifdef COLORED_SHADOWS
+#endif
+#ifdef SSAO
+#endif
+#ifdef HANDHELD_LIGHT
+#endif
+#ifdef SURFACE_SHEEN
+#endif
+#ifdef WAVING_PLANTS
+#endif
+#ifdef WAVING_LEAVES
+#endif
+#ifdef FOLIAGE_TRANSLUCENCY
+#endif
+#ifdef WET_SURFACES
+#endif
+#ifdef WATER_REFRACTION
+#endif
+#ifdef WATER_CAUSTICS
+#endif
+#ifdef WATER_FOAM
+#endif
+#ifdef LIGHT_SHAFTS
+#endif
+#ifdef VALLEY_MIST
+#endif
+#ifdef BLOOM
+#endif
+#ifdef LENS_FLARE
+#endif
+#ifdef FXAA
+#endif
+
 const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 30.0 40.0]
 
 #if QUALITY == 0
