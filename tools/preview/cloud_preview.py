@@ -1,6 +1,6 @@
 """Renders the clouds from a few camera positions (ground, looking up, at the cloud height, above) into one PNG.
 
-Usage: python tools/preview/cloud_preview.py <out.png> [sun_elevation_deg] [rain] [thunder]
+Usage: python tools/preview/cloud_preview.py <out.png> [sun_elevation_deg] [rain] [thunder] [worldTime]
 The clouds read the game's cloud texture, taken from the Minecraft resources jar ModDevGradle leaves in
 build/moddev/artifacts (run a build once). The light colours are computed the way the prepare pass bakes them.
 """
@@ -75,7 +75,7 @@ void main() {
     color = color * c.a + c.rgb;
 
     float key = (luminance(direct) * 0.6 + luminance(ambient)) / PI;
-    float target = 1.75 * mix(1.0, 0.62, rainStrength) * mix(1.0, 0.75, thunderStrength);
+    float target = 1.75 * mix(1.0, 0.62, rainStrength) * mix(1.0, 0.75, thunderStrength) * (1.0 - 0.45 * twilightAmount(sunDir.y));
     color *= clamp(pow(target / max(key, 1e-3), 0.5), 0.9, 3.2);
     fragColor = vec4(tonemap(color), 1.0);
 }
@@ -106,6 +106,7 @@ def main():
     elevation = math.radians(float(sys.argv[2]) if len(sys.argv) > 2 else 35.0)
     rain = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
     thunder = float(sys.argv[4]) if len(sys.argv) > 4 else 0.0
+    world_time = int(sys.argv[5]) if len(sys.argv) > 5 else 12500
     ctx = moderngl.create_standalone_context()
     prog = ctx.program(vertex_shader='#version 330 compatibility\n' + VERT,
                        fragment_shader='#version 330 compatibility\n' + expand(FRAG))
@@ -122,6 +123,8 @@ def main():
         prog['sunPosition'].value = tuple(100.0 * x / n for x in sun)
     if 'gbufferModelViewInverse' in prog:
         prog['gbufferModelViewInverse'].value = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+    if 'worldTime' in prog:
+        prog['worldTime'].value = world_time
     for name, value in (('rainStrength', rain), ('thunderStrength', thunder), ('viewWidth', W), ('viewHeight', H),
                         ('frameTimeCounter', 100.0)):
         if name in prog:

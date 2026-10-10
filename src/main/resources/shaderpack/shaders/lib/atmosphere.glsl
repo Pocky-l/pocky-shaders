@@ -190,23 +190,40 @@ float twilightAmount(float sunY) {
     return smoothstep(-0.2, -0.03, sunY) * (1.0 - smoothstep(0.06, 0.3, sunY));
 }
 
-// The wide glow of sunset and twilight. Single scattering alone leaves a thin red line at the horizon under a grey
-// sky; light scattered many times spreads it into a broad warm arch over the setting sun, with the pinker glow of the
-// Belt of Venus on the opposite side of the sky.
-vec3 twilightGlow(vec3 dir, vec3 sunDir) {
+// The colours of sunrise and sunset that single scattering alone cannot give (it leaves a thin red line at the
+// horizon under a grey sky): light scattered many times through the low, dusty air.
+//  - Over the sun a wide arch: gold and orange at the horizon, through rose into violet higher up. Sunrise is pinker,
+//    sunset more orange and red.
+//  - On the opposite side, where the moon sets or rises: once the sun is down, the blue-grey shadow of the Earth
+//    rises from the horizon, with the pink Belt of Venus above it.
+//  - Overhead the sky deepens into the blue hour (ozone absorption, which single scattering underplays).
+// Returns rgb to add and, in w, how much of the sky light the Earth's shadow takes away.
+vec4 twilightGlow(vec3 dir, vec3 sunDir) {
     float amount = twilightAmount(sunDir.y);
     if (amount <= 0.0) {
-        return vec3(0.0);
+        return vec4(0.0);
     }
+    float m = morning();
     float la = length(dir.xz);
     float lb = length(sunDir.xz);
     float toward = (la > 1e-4 && lb > 1e-4) ? 0.5 + 0.5 * dot(dir.xz / la, sunDir.xz / lb) : 0.5;
-    float height = exp(-max(dir.y, 0.0) / mix(0.12, 0.24, toward));
-    vec3 arch = lowSunHue(sunDir.y + 0.04);
-    vec3 belt = vec3(0.85, 0.55, 0.7) * 0.35;
-    // Overhead the twilight sky deepens into the blue hour (ozone absorption, which single scattering underplays).
-    vec3 blueHour = vec3(0.1, 0.3, 1.0) * 0.012 * smoothstep(0.0, 0.6, dir.y);
-    return (mix(belt, arch, toward * toward) * height * 0.07 + blueHour) * amount;
+    float away = 1.0 - toward;
+    float e = max(dir.y, 0.0);
+
+    vec3 horizon = lowSunHue(sunDir.y + 0.04);
+    horizon = mix(horizon, vec3(1.0, 0.42, 0.38), 0.35 * m);
+    vec3 rose = mix(vec3(1.0, 0.42, 0.45), vec3(0.95, 0.45, 0.75), m);
+    float archHeight = mix(0.08, 0.28, toward * toward);
+    vec3 arch = mix(rose, horizon, exp(-e / 0.07)) * exp(-e / archHeight) * (0.15 + 0.85 * toward * toward);
+
+    float below = smoothstep(0.03, -0.05, sunDir.y);
+    float beltHeight = mix(0.06, 0.16, below);
+    float belt = exp(-sqr((e - beltHeight) / 0.08)) * away * away;
+    vec3 beltColor = mix(vec3(1.0, 0.55, 0.6), vec3(0.95, 0.55, 0.8), m);
+    float shadow = below * exp(-e / 0.06) * away * away * 0.45;
+
+    vec3 blueHour = vec3(0.1, 0.3, 1.0) * 0.014 * smoothstep(0.0, 0.6, e);
+    return vec4((arch * 0.3 + beltColor * belt * 0.12 + blueHour) * amount, shadow * amount);
 }
 
 // Full sky radiance (sun + moon scattering + faint airglow), in world space directions; rain blends in the overcast
@@ -215,7 +232,11 @@ vec3 skyRadiance(vec3 dir, vec3 sunDir, int steps) {
     vec3 sky = scatterAlong(dir, sunDir, vec3(SUN_ILLUMINANCE), steps);
     sky += scatterAlong(dir, -sunDir, MOON_TINT * MOON_ILLUMINANCE * moonPhaseLight(), steps / 2 + 1);
     vec3 airglow = vec3(0.0016, 0.0022, 0.0038) * (1.0 + 2.0 * saturate(dir.y));
-    sky = sky * SKY_RADIANCE_SCALE + airglow + twilightGlow(dir, sunDir);
+    vec4 twilight = twilightGlow(dir, sunDir);
+    sky *= SKY_RADIANCE_SCALE * (1.0 - twilight.w);
+    // The low sun's light reaches the sky through the dusty lower air: richer colour than the clean model gives.
+    sky = max(mix(vec3(luminance(sky)), sky, 1.0 + 0.5 * twilightAmount(sunDir.y)), 0.0);
+    sky += airglow + twilight.rgb;
     if (rainStrength > 0.0) {
         // Below the horizon (reflections, fog looking down) the deck's light is what the ground bounces back.
         float shape = dir.y >= 0.0 ? overcastShape(dir.y) : overcastShape(0.0) * 0.8;

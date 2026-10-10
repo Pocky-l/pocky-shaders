@@ -16,7 +16,12 @@ vec3 grade(vec3 color) {
     vec3 warm = vec3(1.0 + 0.04 * warmth, 1.0 + 0.01 * warmth, 1.0 - 0.05 * warmth);
     color *= warm * mix(vec3(1.0), vec3(0.97, 1.0, 1.04), rainStrength);
     float l = luminance(color);
-    color = max(mix(vec3(l), color, SATURATION * (1.0 - 0.12 * rainStrength - 0.13 * stormDarkness())), 0.0);
+    float saturation = SATURATION * (1.0 - 0.12 * rainStrength - 0.13 * stormDarkness());
+#ifdef DIM_OVERWORLD
+    // Sunrise and sunset are the most colourful moments of the day.
+    saturation *= 1.0 + 0.22 * twilightAmount(sunElevation()) * (1.0 - rainStrength);
+#endif
+    color = max(mix(vec3(l), color, saturation), 0.0);
     return color;
 }
 

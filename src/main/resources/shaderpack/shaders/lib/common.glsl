@@ -91,6 +91,23 @@ float brightnessLift() { return mix(0.5, 2.0, screenBrightness) / 1.25; }
 // none to mirror - only the dim light that comes through the clouds, which lights surfaces but makes no glints.
 float discClarity() { return (1.0 - rainStrength) * (1.0 - thunderStrength); }
 
+// 1 in the morning half of the day (midnight to noon: sunrise), 0 in the evening half (sunset). worldTime 0 is 6:00.
+float morning() {
+    return (worldTime >= 18000 || worldTime < 6000) ? 1.0 : 0.0;
+}
+
+// Sine of the sun's elevation (world space).
+float sunElevation() {
+    return normalize(mat3(gbufferModelViewInverse) * sunPosition).y;
+}
+
+// The dawn haze: about an in-game hour around sunrise (6:00, worldTime 0) it builds up, lies over the whole world and
+// clears again, all smoothly. Rain brings its own fog instead.
+float dawnHaze() {
+    float ticks = mod(float(worldTime) + 1000.0, 24000.0) - 1000.0;
+    return smoothstep(-750.0, -300.0, ticks) * (1.0 - smoothstep(250.0, 750.0, ticks)) * (1.0 - rainStrength);
+}
+
 // How hard it snows (0 in rain).
 float snowfall() { return rainStrength * snowWeather; }
 float luminance(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }

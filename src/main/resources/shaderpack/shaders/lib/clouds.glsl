@@ -110,9 +110,10 @@ vec3 cloudFaceLight(vec3 n, vec3 lightDir, vec3 directColor, vec3 ambientColor) 
     vec3 sunDir = sunDirection();
     float twilight = smoothstep(-0.12, -0.02, sunDir.y) * (1.0 - smoothstep(0.04, 0.25, sunDir.y));
     if (twilight > 0.0) {
-        // Saturated, so the glow stays orange and pink instead of washing out to cream.
+        // Saturated, so the glow stays orange and pink instead of washing out to cream; rose at sunrise.
         vec3 hue = lowSunHue(sunDir.y + 0.03);
-        vec3 glow = hue * hue * SUN_ILLUMINANCE * 0.09 * twilight;
+        hue = mix(hue * hue, vec3(1.0, 0.5, 0.62), 0.45 * morning());
+        vec3 glow = hue * SUN_ILLUMINANCE * 0.11 * twilight;
         clear += glow * (0.35 + 0.65 * saturate(dot(n, sunDir))) / PI * face;
     }
     // Under rain only the grey sky lights them, and they must stay darker than it from below - lighter clouds on a

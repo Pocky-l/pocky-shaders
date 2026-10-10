@@ -44,6 +44,9 @@ void main() {
         vec3 value;
         if (pixel.x == PIXEL_LIGHT_COLOR.x) {
             vec3 sun = SUN_ILLUMINANCE * adaptedTint(directTransmittance(sunDir.y)) * aboveHorizon(sunDir.y);
+            // The low morning sun lights the land with a touch of rose (same luminance).
+            vec3 rose = vec3(1.08, 0.9, 0.98);
+            sun *= mix(vec3(1.0), rose / luminance(rose), morning() * twilightAmount(sunDir.y) * 0.6);
             vec3 moon = MOON_ILLUMINANCE * moonPhaseLight() * MOON_TINT * directTransmittance(-sunDir.y)
                     * aboveHorizon(-sunDir.y);
             value = (sun + moon) * (1.0 - rainStrength * 0.88) * (1.0 - thunderStrength * 0.9);

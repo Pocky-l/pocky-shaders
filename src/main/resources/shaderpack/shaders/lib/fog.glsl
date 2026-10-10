@@ -79,8 +79,8 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
 
 #ifdef VALLEY_MIST
     // Low morning mist in valleys and over water (rain fog replaces it in rain).
-    float morning = smoothstep(0.35, 0.05, sunDir.y) * smoothstep(-0.12, 0.02, sunDir.y);
-    float mistStrength = morning * 0.9 * (1.0 - rainStrength) * FOG_DENSITY;
+    float mistTime = smoothstep(0.35, 0.05, sunDir.y) * smoothstep(-0.12, 0.02, sunDir.y) * morning();
+    float mistStrength = mistTime * 0.9 * (1.0 - rainStrength) * FOG_DENSITY;
     if (mistStrength > 0.0) {
         float mistFalloff = 0.09;
         float mdy = playerPos.y * mistFalloff;
@@ -96,6 +96,18 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     float aerial = 0.3 * FAR_HAZE * smoothstep(far, far * 6.0, dist) * (1.0 - smoothstep(0.0, 0.6, playerPos.y / max(dist, 1.0)));
     amount = 1.0 - (1.0 - amount) * (1.0 - aerial);
 
+    // Dawn haze: for about an hour around sunrise a soft haze lies over the whole world - thicker in the low land, but
+    // reaching up over the hills too - and glows gold towards the rising sun (see the colour below).
+    float dawn = dawnHaze() * smoothstep(0.05, 0.6, eyeSky);
+    float dawnAmount = 0.0;
+    if (dawn > 0.0) {
+        const float DAWN_FALLOFF = 0.02;
+        float ddy = playerPos.y * DAWN_FALLOFF;
+        float dawnHeight = exp(-max(cameraPosition.y - 62.0, -20.0) * DAWN_FALLOFF)
+                * (abs(ddy) > 1e-3 ? (1.0 - exp(-ddy)) / ddy : 1.0);
+        dawnAmount = 1.0 - exp(-dist * dawn * FOG_DENSITY * (0.0007 + 0.0028 * clamp(dawnHeight, 0.0, 4.0)));
+    }
+
     // Hide the edge of the loaded world.
     float border = smoothstep(renderDistance * 0.72, renderDistance, dist);
     amount = max(amount, border);
@@ -103,6 +115,11 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
         float mu = dot(dir, lightDirection());
         vec3 hazeCol = fogCol + directLightColor() * miePhase(mu, 0.6) * 0.05 * (1.0 - rainStrength);
         color = mix(color, hazeCol, hazeAmount * (1.0 - saturate(amount)));
+    }
+    if (dawnAmount > 0.0) {
+        float mu = dot(dir, sunDir);
+        vec3 dawnCol = fogCol + sunDiscColor() * miePhase(mu, 0.7) * 0.06;
+        color = mix(color, dawnCol, dawnAmount * (1.0 - saturate(amount)));
     }
     color = mix(color, fogCol, saturate(amount));
 #else
