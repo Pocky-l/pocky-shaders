@@ -2,31 +2,22 @@ package com.pockyl.pocky_shaders;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import org.slf4j.Logger;
 
-import com.pockyl.pocky_shaders.registry.ModBlocks;
-import com.pockyl.pocky_shaders.registry.ModItems;
-import com.pockyl.pocky_shaders.registry.PockyModsTab;
-
+/**
+ * Pocky Shaders: a shader pack for Iris bundled in a mod. Everything happens on the client (see {@code client});
+ * on a dedicated server the mod only loads.
+ */
 @Mod(PockyShaders.MOD_ID)
 public final class PockyShaders {
     public static final String MOD_ID = "pocky_shaders";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public PockyShaders(IEventBus modBus, ModContainer container) {
-        ModBlocks.register(modBus);
-        ModItems.register(modBus);
-        // Add this mod's items to the shared "Pocky Mods" creative tab, e.g. output.accept(ModItems.FOO).
-        PockyModsTab.register(modBus, () -> new ItemStack(Items.SLIME_BALL), output -> {
-        });
-
-        container.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+    public PockyShaders(ModContainer container) {
+        container.registerConfig(ModConfig.Type.CLIENT, Config.SPEC);
     }
 
     public static ResourceLocation id(String path) {

@@ -1,3 +1,25 @@
 {
-  "itemGroup.pockymods.pocky_mods": "Pocky Mods"
+  "itemGroup.pockymods.pocky_mods": "Pocky Mods",
+  "key.categories.pocky_shaders": "Pocky Shaders",
+  "key.pocky_shaders.toggle": "Shaders on/off",
+  "key.pocky_shaders.cycle_preset": "Next quality preset",
+  "pocky_shaders.preset.low": "Low",
+  "pocky_shaders.preset.medium": "Medium",
+  "pocky_shaders.preset.high": "High",
+  "pocky_shaders.preset.ultra": "Ultra",
+  "pocky_shaders.preset.custom": "Custom",
+  "pocky_shaders.status.on": "on",
+  "pocky_shaders.status.off": "off",
+  "pocky_shaders.message.enabled": "Pocky Shaders on",
+  "pocky_shaders.message.disabled": "Shaders off",
+  "pocky_shaders.message.preset": "Pocky Shaders: %s quality",
+  "pocky_shaders.message.status": "Pocky Shaders: %s, preset %s (selected pack: %s)",
+  "pocky_shaders.message.no_iris": "Pocky Shaders needs Iris to be installed",
+  "pocky_shaders.message.no_preset": "Unknown preset: %s",
+  "pocky_shaders.message.load_failed": "The shader pack failed to load: %s",
+  "pocky_shaders.message.failed": "Could not change the shaders: %s",
+  "pocky_shaders.configuration.title": "Pocky Shaders",
+  "pocky_shaders.configuration.installPack": "Install the shader pack",
+  "pocky_shaders.configuration.enableOnFirstInstall": "Turn on after the first install",
+  "pocky_shaders.configuration.addModdedBlocks": "Waving and glowing blocks of other mods"
 }

@@ -1,3 +1,25 @@
 {
-  "itemGroup.pockymods.pocky_mods": "Pocky Mods"
+  "itemGroup.pockymods.pocky_mods": "Pocky Mods",
+  "key.categories.pocky_shaders": "Pocky Shaders",
+  "key.pocky_shaders.toggle": "Шейдеры вкл/выкл",
+  "key.pocky_shaders.cycle_preset": "Следующий пресет качества",
+  "pocky_shaders.preset.low": "Низкое",
+  "pocky_shaders.preset.medium": "Среднее",
+  "pocky_shaders.preset.high": "Высокое",
+  "pocky_shaders.preset.ultra": "Ультра",
+  "pocky_shaders.preset.custom": "Своё",
+  "pocky_shaders.status.on": "включены",
+  "pocky_shaders.status.off": "выключены",
+  "pocky_shaders.message.enabled": "Pocky Shaders включены",
+  "pocky_shaders.message.disabled": "Шейдеры выключены",
+  "pocky_shaders.message.preset": "Pocky Shaders: качество %s",
+  "pocky_shaders.message.status": "Pocky Shaders: %s, пресет %s (выбранный пак: %s)",
+  "pocky_shaders.message.no_iris": "Для Pocky Shaders нужен Iris",
+  "pocky_shaders.message.no_preset": "Неизвестный пресет: %s",
+  "pocky_shaders.message.load_failed": "Шейдер-пак не загрузился: %s",
+  "pocky_shaders.message.failed": "Не удалось переключить шейдеры: %s",
+  "pocky_shaders.configuration.title": "Pocky Shaders",
+  "pocky_shaders.configuration.installPack": "Устанавливать шейдер-пак",
+  "pocky_shaders.configuration.enableOnFirstInstall": "Включить после первой установки",
+  "pocky_shaders.configuration.addModdedBlocks": "Колыхание и свечение блоков других модов"
 }

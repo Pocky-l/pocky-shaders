@@ -21,6 +21,15 @@ sourceSets.main.resources {
 }
 
 repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = 'https://api.modrinth.com/maven'
+            }
+        }
+        filter { includeGroup('maven.modrinth') }
+    }
 }
 
 neoForge {
@@ -76,6 +85,8 @@ configurations {
 }
 
 dependencies {
+    // Optional at runtime: the pack is for Iris; without it the mod only logs that Iris is missing.
+    compileOnly("maven.modrinth:iris:${iris_version}") { transitive = false }
 }
 
 var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {

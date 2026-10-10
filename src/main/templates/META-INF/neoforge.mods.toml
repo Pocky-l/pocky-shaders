@@ -11,6 +11,8 @@ authors="${mod_authors}"
 displayURL="${mod_url}"
 logoFile="logo.png"
 description='''${mod_description}'''
+# Purely visual: servers and clients do not need to have it both.
+displayTest="IGNORE_ALL_VERSION"
 
 [[dependencies.${mod_id}]]
     modId="neoforge"
@@ -25,3 +27,10 @@ description='''${mod_description}'''
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="iris"
+    type="optional"
+    versionRange="[1.8,)"
+    ordering="NONE"
+    side="CLIENT"
