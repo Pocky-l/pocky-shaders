@@ -57,6 +57,7 @@
   "pocky_shaders.bench.step.sky_reflections": "world reflections in water",
   "pocky_shaders.bench.step.no_light_shafts": "light shafts",
   "pocky_shaders.bench.step.no_bloom": "bloom",
+  "pocky_shaders.bench.step.no_lens_flare": "lens flare",
   "pocky_shaders.bench.step.no_fxaa": "anti-aliasing",
   "pocky_shaders.bench.step.no_water_extras": "caustics and foam",
   "pocky_shaders.bench.step.no_fog_extras": "haze and mist",

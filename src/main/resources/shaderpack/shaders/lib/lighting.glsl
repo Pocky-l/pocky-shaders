@@ -47,6 +47,34 @@ float ggxSpecular(vec3 n, vec3 v, vec3 l, float roughness) {
     return d * nl * 0.25;
 }
 
+// Diffuse light of a rough, matte surface (Burley): a little brighter with the sun behind the viewer, a little flatter
+// under grazing light, where plain Lambert makes every block look like smooth plastic. Half of it is blended with
+// Lambert, so the brightness of the whole scene stays where it was calibrated.
+float roughDiffuse(float nl, float nv, float lh, float roughness) {
+    float f90 = 0.5 + 2.0 * roughness * lh * lh;
+    float light = 1.0 + (f90 - 1.0) * pow(1.0 - nl, 5.0);
+    float view = 1.0 + (f90 - 1.0) * pow(1.0 - nv, 5.0);
+    return mix(1.0, light * view, 0.5);
+}
+
+// Roughness of the sun's reflection on a material (no reflection on plants: their quads have no real surface normal).
+float sheenRoughness(int material) {
+    if (material == MAT_LEAVES) {
+        return 0.5;
+    }
+    if (material == MAT_ENTITY || material == MAT_HAND) {
+        return 0.55;
+    }
+    return 0.62;
+}
+
+// The sun mirrored by the surface itself. Every block is a little glossy (a dielectric, F0 0.04): a faint broad
+// highlight from above, a real glare on ground and walls when looking towards a low sun.
+float sunSheen(vec3 n, vec3 v, vec3 l, float roughness) {
+    vec3 h = normalize(v + l);
+    return ggxSpecular(n, v, l, roughness) * fresnelSchlick(dot(v, h), 0.04);
+}
+
 // Light reaching the surface from the light held in hand.
 float handLight(vec3 playerPos) {
 #ifdef HANDHELD_LIGHT
@@ -66,22 +94,33 @@ vec3 shade(Surface s, Lights lights, float noise) {
     float sky = s.lightmap.y;
     bool foliage = s.material == MAT_PLANT || s.material == MAT_LEAVES;
 
+#ifdef DIM_OVERWORLD
+    vec3 l = lightDirection();
+#else
+    vec3 l = vec3(0.0, 1.0, 0.0);
+#endif
+
     // Sky ambient: brighter on top faces, fading in towards shelter.
     float skyFalloff = sky * sky;
     float up = foliage ? 0.85 : 0.72 + 0.28 * s.normal.y;
+    // The sky is brighter around the sun: side faces turned towards it get a little more of its light.
+    vec2 sunSide = l.xz / max(length(l.xz), 1e-4);
+    float side = foliage ? 0.0 : dot(s.normal.xz, sunSide) * (1.0 - rainStrength);
     // Lambertian: radiance = albedo * irradiance / pi.
-    vec3 ambient = lights.ambient / PI * skyFalloff * up;
+    vec3 ambient = lights.ambient / PI * skyFalloff * up * (1.0 + 0.15 * side);
 
-    // Some sun light bounced off the ground fills in shadows.
-    ambient += lights.direct / PI * 0.035 * skyFalloff * (0.6 - 0.4 * s.normal.y);
+    // Sunlight bounced off the ground (albedo about 0.15, a little green-brown) lights faces turned away from the sun
+    // from below: without it shaded walls look cut out of the scene.
+    float groundView = foliage ? 0.35 : 0.5 - 0.5 * s.normal.y;
+    ambient += lights.direct * saturate(l.y) * 0.15 * vec3(0.95, 1.0, 0.85) * groundView / PI * skyFalloff;
 
     ambient += vec3(AMBIENT_MIN) * vec3(0.8, 0.9, 1.1) + nightVision * vec3(0.25);
 
     vec3 block = blockLightColor() * (blockLightCurve(s.lightmap.x) + handLight(s.playerPos));
 
     vec3 direct = vec3(0.0);
+    vec3 sheen = vec3(0.0);
 #ifdef DIM_OVERWORLD
-    vec3 l = lightDirection();
     float nl = dot(s.normal, l);
     float diffuse;
     if (s.material == MAT_PLANT || s.material == MAT_PARTICLE) {
@@ -89,7 +128,8 @@ vec3 shade(Surface s, Lights lights, float noise) {
     } else if (s.material == MAT_LEAVES) {
         diffuse = saturate(nl) * 0.5 + 0.35;
     } else {
-        diffuse = saturate(nl);
+        diffuse = saturate(nl) * roughDiffuse(saturate(nl), saturate(dot(s.normal, viewDir)),
+                saturate(dot(l, normalize(l + viewDir))), 0.8);
     }
     // Direct light only reaches places the sky light reaches: no sun through cave walls beyond the shadow map.
     float skyGate = smoothstep(0.1, 0.45, sky);
@@ -104,6 +144,11 @@ vec3 shade(Surface s, Lights lights, float noise) {
         visibility *= cloudShadow(s.playerPos, l);
 #endif
         direct = lights.direct / PI * diffuse * visibility * skyGate;
+#ifdef SURFACE_SHEEN
+        if (s.material != MAT_PLANT && s.material != MAT_PARTICLE && nl > 0.0) {
+            sheen = lights.direct * sunSheen(s.normal, viewDir, l, sheenRoughness(s.material)) * visibility * skyGate;
+        }
+#endif
 #ifdef FOLIAGE_TRANSLUCENCY
         if (foliage) {
             // Light shining through thin leaves when looking towards the sun.
@@ -123,7 +168,8 @@ vec3 shade(Surface s, Lights lights, float noise) {
     }
 #endif
 
-    vec3 color = s.albedo * ((ambient + block) * s.ao + direct);
+    // The sheen is reflected light: white, not tinted by the albedo.
+    vec3 color = s.albedo * ((ambient + block) * s.ao + direct) + sheen;
 
 #if defined WET_SURFACES && defined DIM_OVERWORLD
     // Rain darkens exposed surfaces and gives them a soft sky sheen.

@@ -57,6 +57,7 @@
   "pocky_shaders.bench.step.sky_reflections": "отражения мира в воде",
   "pocky_shaders.bench.step.no_light_shafts": "лучи света",
   "pocky_shaders.bench.step.no_bloom": "свечение",
+  "pocky_shaders.bench.step.no_lens_flare": "блики линзы",
   "pocky_shaders.bench.step.no_fxaa": "сглаживание",
   "pocky_shaders.bench.step.no_water_extras": "каустика и пена",
   "pocky_shaders.bench.step.no_fog_extras": "дымка и туман",

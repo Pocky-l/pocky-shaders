@@ -64,6 +64,20 @@ vec3 directTransmittance(float cosZenith) {
     return exp(-tau * m) * smoothstep(-0.04, 0.06, cosZenith);
 }
 
+// The eye adapts to the colour of the light it is in: a low sun looks golden rather than deep red, a midday sun
+// close to white. Softens the hue of a transmittance, keeps its luminance.
+vec3 adaptedTint(vec3 transmittance) {
+    float m = max(max(transmittance.r, transmittance.g), max(transmittance.b, 1e-6));
+    vec3 c = pow(transmittance / m, vec3(0.6));
+    return c * (luminance(transmittance) / max(luminance(c), 1e-6));
+}
+
+// Share of a light body's direct light while it is up. Zero at the horizon: Iris switches the shadow light between
+// sun and moon there, and neither may light the world from the other's direction.
+float aboveHorizon(float cosZenith) {
+    return smoothstep(0.0, 0.07, cosZenith);
+}
+
 // Light scattered towards the viewer along dir by one light body of the given illuminance.
 vec3 scatterAlong(vec3 dir, vec3 lightDir, vec3 illuminance, int steps) {
     vec3 origin = vec3(0.0, PLANET_RADIUS + 0.3, 0.0);

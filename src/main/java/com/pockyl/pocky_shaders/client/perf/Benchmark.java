@@ -182,6 +182,7 @@ public final class Benchmark {
         measured.add(Step.of("sky_reflections", "Sky-only water reflections (no SSR)", "WATER_REFLECTIONS", "1"));
         measured.add(Step.of("no_light_shafts", "No light shafts", "LIGHT_SHAFTS", "false"));
         measured.add(Step.of("no_bloom", "No bloom", "BLOOM", "false"));
+        measured.add(Step.of("no_lens_flare", "No lens flare", "LENS_FLARE", "false"));
         measured.add(Step.of("no_fxaa", "No FXAA", "FXAA", "false"));
         measured.add(Step.of("no_water_extras", "No caustics and foam", "WATER_CAUSTICS", "false", "WATER_FOAM", "false"));
         measured.add(Step.of("no_fog_extras", "No low haze, far haze, mist", "LOW_HAZE", "0.0", "FAR_HAZE", "0.0",

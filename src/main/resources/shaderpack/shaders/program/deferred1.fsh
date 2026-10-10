@@ -88,6 +88,15 @@ float screenSpaceShadow(vec3 viewPos, vec3 viewLight, float noise) {
 }
 #endif
 
+#ifdef DIM_OVERWORLD
+// Bright air right around the sun: forward scattering too narrow for the sky table to hold. A tight glow at the disc
+// and a faint wide one, in the colour of the sun (gone behind a rain deck, like the disc).
+vec3 sunGlow(vec3 dir, vec3 sunDir) {
+    float a = acos(clamp(dot(dir, sunDir), -1.0, 1.0));
+    return sunDiscColor() * (0.12 * exp(-a / 0.05) + 0.02 * exp(-a / 0.3));
+}
+#endif
+
 void main() {
     vec4 scene = texture(colortex0, texcoord);
     float depth = texture(depthtex0, texcoord).r;
@@ -142,13 +151,14 @@ void main() {
 
     if (sky) {
         // Atmosphere behind the vanilla sun, moon and stars (drawn additively into colortex0).
-        color = sampleSkyLut(dir, sunDir) + scene.rgb * (1.0 - rainStrength);
+        color = sampleSkyLut(dir, sunDir) + sunGlow(dir, sunDir) + scene.rgb * (1.0 - rainStrength);
     }
 
 #if CLOUDS > 0
     if (sky || cameraPosition.y > CLOUD_BOTTOM - 40.0 || dir.y > 0.0) {
-        vec4 clouds = cloudLayers(dir, sceneDist, lightDirection(), directLightColor(), ambientLightColor(), CLOUD_STEPS,
-                dither(gl_FragCoord.xy));
+        vec3 skyBehind = sampleSkyLut(vec3(dir.x, max(dir.y, 0.0), dir.z), sunDir);
+        vec4 clouds = cloudLayers(dir, sceneDist, lightDirection(), directLightColor(), ambientLightColor(), skyBehind,
+                CLOUD_STEPS);
 
         color = color * clouds.a + clouds.rgb;
     }

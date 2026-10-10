@@ -2,9 +2,6 @@
 
 #include "/lib/common.glsl"
 #include "/lib/atmosphere.glsl"
-#if CLOUDS > 0
-#include "/lib/clouds.glsl"
-#endif
 
 /*
 const int colortex7Format = RGBA16F;
@@ -46,15 +43,21 @@ void main() {
     if (pixel.y == 0 && pixel.x < 3) {
         vec3 value;
         if (pixel.x == PIXEL_LIGHT_COLOR.x) {
-            vec3 sun = SUN_ILLUMINANCE * directTransmittance(sunDir.y);
-            vec3 moon = MOON_ILLUMINANCE * moonPhaseLight() * MOON_TINT * directTransmittance(-sunDir.y);
+            vec3 sun = SUN_ILLUMINANCE * adaptedTint(directTransmittance(sunDir.y)) * aboveHorizon(sunDir.y);
+            vec3 moon = MOON_ILLUMINANCE * moonPhaseLight() * MOON_TINT * directTransmittance(-sunDir.y)
+                    * aboveHorizon(-sunDir.y);
             value = (sun + moon) * (1.0 - rainStrength * 0.88) * (1.0 - thunderStrength * 0.9);
         } else if (pixel.x == PIXEL_AMBIENT_COLOR.x) {
+            // Single scattering alone makes skylight far too blue (the missing multiple scattering and the light
+            // the ground bounces back up are both close to white): shadows would turn cyan.
+            vec3 sky = ambientIrradiance(sunDir);
+            sky = mix(vec3(luminance(sky)), sky, 0.7);
             // Rainy nights keep a little more light (only at night: by day the overcast deck sets the level).
             float night = smoothstep(0.05, -0.1, sunDir.y);
-            value = max(ambientIrradiance(sunDir), vec3(0.05, 0.06, 0.08) * (1.0 + rainStrength * 0.6 * night));
+            value = max(sky, vec3(0.05, 0.06, 0.08) * (1.0 + rainStrength * 0.6 * night));
         } else {
-            value = SUN_ILLUMINANCE * directTransmittance(sunDir.y) * (1.0 - rainStrength) * (1.0 - thunderStrength);
+            value = SUN_ILLUMINANCE * adaptedTint(directTransmittance(sunDir.y)) * (1.0 - rainStrength)
+                    * (1.0 - thunderStrength);
         }
         outSky = vec4(value, 1.0);
         return;
@@ -67,23 +70,6 @@ void main() {
         outSky = vec4(skyRadiance(dir, sunDir, SKY_STEPS), 1.0);
         return;
     }
-
-#if CLOUDS > 0
-    ivec2 mapPixel = pixel - CLOUD_MAP_ORIGIN;
-    if (all(greaterThanEqual(mapPixel, ivec2(0))) && all(lessThan(mapPixel, ivec2(CLOUD_MAP_SIZE)))) {
-        CloudLayer deck = mainCloudLayer();
-        vec2 cell = cloudMapCell(mapPixel, cloudMapCentre(deck.offset, deck.cell));
-        vec4 v;
-        v.r = cloudCellAt(cell, deck.coverage, deck.seed) ? 1.0 : 0.0;
-        v.g = cloudMottle(cell, deck.seed);
-        CloudLayer scud = scudCloudLayer();
-        vec2 scudCell = cloudMapCell(mapPixel, cloudMapCentre(scud.offset, scud.cell));
-        v.b = scud.coverage > 0.0 && cloudCellAt(scudCell, scud.coverage, scud.seed) ? 1.0 : 0.0;
-        v.a = cloudMottle(scudCell, scud.seed);
-        outSky = v;
-        return;
-    }
-#endif
 
     discard;
 }

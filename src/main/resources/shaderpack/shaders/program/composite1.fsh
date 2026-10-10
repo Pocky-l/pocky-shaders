@@ -36,6 +36,63 @@ vec3 bloom(vec2 uv) {
     return sum / weight;
 }
 
+#if defined LENS_FLARE && defined DIM_OVERWORLD
+// How much of the sun is in view (0..1): its core should be as bright as the sun itself; terrain, clouds and the
+// screen edge take that away. All pixels read the same few texels, so it costs little.
+float sunVisibility(vec2 sunUv) {
+    float expected = luminance(sunDiscColor()) * 1.1;
+    if (expected < 1e-3) {
+        return 0.0;
+    }
+    // A square of 5 x 5 samples inside the sun's core (about 1.3 degrees across).
+    vec2 radius = 0.011 * vec2(gbufferProjection[0][0], gbufferProjection[1][1]) * 0.5;
+    float sum = 0.0;
+    for (int x = -2; x <= 2; x++) {
+        for (int y = -2; y <= 2; y++) {
+            vec2 uv = sunUv + vec2(x, y) * 0.5 * radius;
+            if (all(greaterThan(uv, vec2(0.0))) && all(lessThan(uv, vec2(1.0)))) {
+                sum += saturate(luminance(texture(colortex0, uv).rgb) / expected);
+            }
+        }
+    }
+    return smoothstep(0.3, 0.85, sum / 25.0);
+}
+
+// One reflection of the aperture: a soft disc with a slightly brighter rim.
+float flareGhost(vec2 uv, vec2 centre, float radius, float aspect) {
+    float d = length((uv - centre) * vec2(aspect, 1.0)) / radius;
+    return smoothstep(1.0, 0.7, d) * (0.55 + 0.45 * d * d);
+}
+
+// Reflections of the sun inside the lens: a row of faint tinted ghosts along the line from the sun through the
+// centre of the screen and a thin rainbow ring around the sun. Added after exposure, so it is as bright at sunset as
+// at noon relative to the scene.
+vec3 lensFlare(vec2 uv) {
+    if (sunPosition.z >= 0.0 || isEyeInWater != 0) {
+        return vec3(0.0);
+    }
+    vec2 sunUv = viewToScreen(sunPosition).xy;
+    float visible = sunVisibility(sunUv);
+    if (visible <= 0.0) {
+        return vec3(0.0);
+    }
+    float aspect = viewWidth / viewHeight;
+    vec2 axis = 0.5 - sunUv;
+    vec3 ghosts = vec3(1.0, 0.8, 0.55) * 0.5 * flareGhost(uv, sunUv + axis * 0.45, 0.02, aspect)
+            + vec3(0.55, 0.9, 0.7) * 0.18 * flareGhost(uv, sunUv + axis * 0.75, 0.05, aspect)
+            + vec3(0.75, 0.6, 1.0) * 0.25 * flareGhost(uv, sunUv + axis * 1.2, 0.035, aspect)
+            + vec3(0.5, 0.7, 1.0) * 0.1 * flareGhost(uv, sunUv + axis * 1.45, 0.09, aspect)
+            + vec3(1.0, 0.7, 0.4) * 0.15 * flareGhost(uv, sunUv + axis * 1.8, 0.06, aspect)
+            + vec3(0.6, 0.8, 1.0) * 0.06 * flareGhost(uv, sunUv + axis * 2.1, 0.14, aspect);
+    // The ring splits into colours: each channel at a slightly different radius.
+    float d = length((uv - sunUv) * vec2(aspect, 1.0));
+    vec3 ringOffset = (d - vec3(0.335, 0.32, 0.305)) / 0.012;
+    vec3 ring = exp(-ringOffset * ringOffset) * 0.05;
+    vec3 sun = sunDiscColor() / SUN_ILLUMINANCE;
+    return (ghosts * 0.12 + ring) * sun * visible * LENS_FLARE_STRENGTH;
+}
+#endif
+
 float exposure() {
     float eyeSky = smoothstep(0.0, 0.7, float(eyeBrightnessSmooth.y) / 240.0);
 #ifdef DIM_OVERWORLD
@@ -59,5 +116,8 @@ void main() {
     color = mix(color, bloom(texcoord), amount);
 #endif
     color *= exposure();
+#if defined LENS_FLARE && defined DIM_OVERWORLD
+    color += lensFlare(texcoord);
+#endif
     outColor = vec4(tonemap(color), 1.0);
 }

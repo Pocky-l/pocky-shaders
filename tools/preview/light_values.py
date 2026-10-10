@@ -31,9 +31,10 @@ vec3 ambientIrradiance(vec3 sunDir) {
 void main() {
     int x = int(gl_FragCoord.x);
     vec3 v;
-    if (x == 0) v = (SUN_ILLUMINANCE * directTransmittance(previewSun.y) + MOON_ILLUMINANCE * MOON_TINT * directTransmittance(-previewSun.y))
+    if (x == 0) v = (SUN_ILLUMINANCE * adaptedTint(directTransmittance(previewSun.y)) * aboveHorizon(previewSun.y)
+            + MOON_ILLUMINANCE * MOON_TINT * directTransmittance(-previewSun.y) * aboveHorizon(-previewSun.y))
             * (1.0 - rainStrength * 0.88) * (1.0 - thunderStrength * 0.9);
-    else if (x == 1) v = ambientIrradiance(previewSun);
+    else if (x == 1) { v = ambientIrradiance(previewSun); v = mix(vec3(luminance(v)), v, 0.7); }
     else if (x == 2) v = skyRadiance(vec3(0.0, 1.0, 0.0), previewSun, 12);
     else v = skyRadiance(normalize(vec3(1.0, 0.04, 0.0)), previewSun, 12);
     fragColor = vec4(v, 1.0);
