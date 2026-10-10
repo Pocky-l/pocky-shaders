@@ -5,6 +5,8 @@
 #ifdef DIM_OVERWORLD
 uniform sampler2D colortex7;
 #include "/lib/sky.glsl"
+#define CLOUD_LOOKUP
+#include "/lib/clouds.glsl"
 #endif
 #include "/lib/lighting.glsl"
 
@@ -31,7 +33,7 @@ layout(location = 1) out vec4 outData;
 
 void main() {
     // Vanilla chunks cover the near range; DH only fills in beyond them.
-    if (length(playerPos.xz) < far * 0.8) {
+    if (length(playerPos.xz) < min(far * 0.8, far - 32.0)) {
         discard;
     }
     vec3 n = normalize(worldNormal);
@@ -49,21 +51,19 @@ void main() {
             discard;
         }
     }
-    vec3 v = -normalize(playerPos);
-    float f = fresnelSchlick(dot(v, n), 0.02);
-    Lights lights = frameLights();
-    vec3 deep = (lights.ambient * 0.6 + lights.direct * 0.15) / PI * lightmap.y * lightmap.y * vec3(0.05, 0.2, 0.24);
-    vec3 color = deep;
-#ifdef DIM_OVERWORLD
-    color = mix(deep, sampleSkyLut(reflect(-v, n), sunDirection()) * smoothstep(0.3, 0.85, lightmap.y), f);
-#endif
-    outColor = vec4(color, 0.88);
-    outData = vec4(0.0);
+    // Same water as near the player: composite shades it from this normal, tint and sky light.
+    vec3 surfaceNormal = abs(n.y) > 0.5 ? vec3(0.0, sign(n.y), 0.0) : n;
+    outColor = vec4(0.0);
+    outData = vec4(encodeNormal(surfaceNormal), packWater(vertexColor.rgb, max(lightmap.y, 0.8)), 1.0);
 #else
     // LODs have one flat colour per block, textures average darker and less saturated: match them, and fake the
     // texel pattern near the player (4 texels per block - finer would only shimmer at this distance).
-    albedo = mix(vec3(luminance(albedo)), albedo, 0.85) * 0.88;
     bool leaves = dhMaterial == DH_BLOCK_LEAVES;
+    if (leaves && max(albedo.r, max(albedo.g, albedo.b)) < 0.01) {
+        // Some leaves (birch, with colour handlers wrapped by other mods) reach DH without a colour: use foliage green.
+        albedo = srgbToLinear(vec3(0.5, 0.65, 0.33));
+    }
+    albedo = mix(vec3(luminance(albedo)), albedo, 0.85) * (leaves ? 0.62 : 0.85);
     float detail = 1.0 - smoothstep(180.0, 420.0, dist);
     vec3 cellPos = playerPos + cameraPosition - n * 0.01;
     float blockVariation = hash13(floor(cellPos)) - 0.5;

@@ -2,7 +2,7 @@
 // PROG_EMISSIVE (spider eyes, beacon beam), PROG_GLINT, PROG_DAMAGE, PROG_WEATHER.
 
 #include "/lib/common.glsl"
-#if defined PROG_SKYTEXTURED && defined DIM_OVERWORLD
+#if (defined PROG_SKYTEXTURED || defined PROG_WEATHER) && defined DIM_OVERWORLD
 #include "/lib/atmosphere.glsl"
 uniform sampler2D colortex7;
 #include "/lib/sky.glsl"
@@ -36,7 +36,7 @@ void main() {
     #ifdef DIM_OVERWORLD
     // The vanilla (square) sun, as bright and as coloured as the sunlight through the air; the moon as it is.
     if (renderStage == MC_RENDER_STAGE_SUN) {
-        color.rgb = srgbToLinear(color.rgb) * sunDiscColor() * 2.5;
+        color.rgb = srgbToLinear(color.rgb) * sunDiscColor() * 1.2;
     } else {
         color.rgb = srgbToLinear(color.rgb) * (renderStage == MC_RENDER_STAGE_MOON ? 1.6 : 1.0);
     }
@@ -59,8 +59,14 @@ void main() {
     if (color.a < 0.01) {
         discard;
     }
-    float light = 0.35 + 0.65 * lightmap.y + lightmap.x * 0.4;
-    outColor = vec4(srgbToLinear(color.rgb) * light, color.a);
+    // Lit like the world around it, so rain curtains darken with a storm instead of glowing in it.
+    #ifdef DIM_OVERWORLD
+    vec3 light = (ambientLightColor() * 0.9 + directLightColor() * 0.2) / PI * lightmap.y * lightmap.y;
+    #else
+    vec3 light = vec3(0.3) * lightmap.y;
+    #endif
+    light += vec3(1.0, 0.7, 0.45) * lightmap.x * lightmap.x * 0.5 + vec3(AMBIENT_MIN);
+    outColor = vec4(srgbToLinear(color.rgb) * light, color.a * 0.8);
 #elif defined PROG_BASIC
     outColor = vec4(srgbToLinear(vertexColor.rgb), vertexColor.a);
 #else

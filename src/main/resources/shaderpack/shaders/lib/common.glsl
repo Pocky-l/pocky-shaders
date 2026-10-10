@@ -19,6 +19,7 @@ uniform vec3 fogColor;
 uniform float frameTimeCounter;
 uniform float rainStrength;
 uniform float wetness;
+uniform float thunderStrength;
 uniform float viewWidth;
 uniform float viewHeight;
 uniform float near;
@@ -132,6 +133,12 @@ float valueNoise(vec2 p) {
     float c = hash12(i + vec2(0.0, 1.0));
     float d = hash12(i + vec2(1.0, 1.0));
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+// Water tint and sky light packed into one 16-bit channel (4 bits each) of colortex4.
+float packWater(vec3 tint, float sky) {
+    vec4 q = floor(saturate(vec4(tint, sky)) * 15.0 + 0.5);
+    return (q.r * 4096.0 + q.g * 256.0 + q.b * 16.0 + q.a) / 65535.0;
 }
 
 vec3 srgbToLinearApprox(vec3 c) {

@@ -7,7 +7,7 @@ const float ATMOSPHERE_RADIUS = 6471.0;
 const float RAYLEIGH_HEIGHT = 8.0;
 const float MIE_HEIGHT = 1.2;
 const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 13.5e-3, 33.1e-3);
-const float MIE_BETA = 14e-3;
+const float MIE_BETA = 9e-3;
 const float MIE_G = 0.8;
 // Ozone absorbs mostly green-orange light; it keeps twilight skies blue instead of grey-green. Expressed per unit of
 // Rayleigh optical depth, since both follow the air column.
@@ -103,7 +103,7 @@ vec3 scatterAlong(vec3 dir, vec3 lightDir, vec3 illuminance, int steps) {
 
 vec3 rainGrey(vec3 color) {
     float l = luminance(color);
-    return mix(color, vec3(l) * vec3(0.92, 0.96, 1.0), rainStrength * 0.75) * (1.0 - rainStrength * 0.5);
+    return mix(color, vec3(l) * vec3(0.92, 0.96, 1.0), rainStrength * 0.75) * (1.0 - rainStrength * 0.5) * (1.0 - thunderStrength * 0.45);
 }
 
 // Full sky radiance (sun + moon scattering + faint airglow), in world space directions.

@@ -80,7 +80,7 @@ void main() {
 #if CLOUDS > 0
     if (sky || cameraPosition.y > CLOUD_BOTTOM - 40.0 || dir.y > 0.0) {
         vec4 clouds = cloudLayers(dir, sceneDist, lightDirection(), directLightColor(), ambientLightColor(), CLOUD_STEPS,
-                dither(gl_FragCoord.xy));
+                hash12(gl_FragCoord.xy + float(frameCounter % 1024) * 7.31));
         color = color * clouds.a + clouds.rgb;
     }
 #endif

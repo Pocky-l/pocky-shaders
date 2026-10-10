@@ -28,7 +28,7 @@ float cloudFbm(vec2 p, int octaves) {
 }
 
 float cloudCoverage() {
-    return saturate(0.4 * CLOUD_COVERAGE + rainStrength * 0.4);
+    return saturate(0.4 * CLOUD_COVERAGE + rainStrength * 0.4 + thunderStrength * 0.2);
 }
 
 vec2 cloudDrift() {
@@ -97,6 +97,28 @@ float cloudDensity(vec3 worldPos, bool detail) {
     return d;
 }
 
+// Share of direct sunlight that gets through the clouds above a point (playerPos relative to the camera).
+float cloudShadow(vec3 playerPos, vec3 lightDir) {
+#if CLOUDS > 0
+    if (lightDir.y < 0.05) {
+        return 1.0;
+    }
+    vec3 worldPos = playerPos + cameraPosition;
+    if (worldPos.y > CLOUD_TOP) {
+        return 1.0;
+    }
+    float h0 = max(CLOUD_BOTTOM + 30.0, worldPos.y);
+    float h1 = max(CLOUD_BOTTOM + 110.0, worldPos.y);
+    vec2 p0 = worldPos.xz + lightDir.xz * ((h0 - worldPos.y) / lightDir.y);
+    vec2 p1 = worldPos.xz + lightDir.xz * ((h1 - worldPos.y) / lightDir.y);
+    float column = sampleCloudColumn(p0) + sampleCloudColumn(p1) * 0.7;
+    // Thick clouds still let some diffuse light through.
+    return mix(0.12, 1.0, exp(-column * 3.5));
+#else
+    return 1.0;
+#endif
+}
+
 float cloudPhase(float mu) {
     // Strong forward lobe (silver lining) plus a soft backward one.
     return mix(miePhase(mu, -0.15), miePhase(mu, 0.7), 0.6) * 4.0 * PI;
@@ -119,7 +141,7 @@ vec4 volumetricClouds(vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, 
 
     // Grazing rays cross much more cloud: more steps towards the horizon, and no further than the haze lets see.
     t1 = min(t1, t0 + 3000.0);
-    int count = min(int(float(steps) * mix(2.5, 1.0, abs(dir.y))), 72);
+    int count = steps * 3 / 2;
     float stepLen = (t1 - t0) / float(count);
     float mu = dot(dir, lightDir);
     float phase = cloudPhase(mu);

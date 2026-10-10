@@ -149,12 +149,15 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
         light += blockLightColor() * 0.02;
         vec3 scatterColor = light * mix(vec3(0.05, 0.22, 0.26), tint * vec3(0.3, 0.5, 0.55), 0.5);
         result = below * transmit + scatterColor * (1.0 - exp(-waterDist * 0.4 / WATER_CLARITY));
+        result *= mix(0.7, 1.0, smoothstep(0.1, 0.8, waterDist));
     }
 
 #if WATER_REFLECTIONS > 0
     if (isEyeInWater == 0) {
         vec3 reflectView = reflect(viewDir, viewNormal);
-        float fresnel = fresnelSchlick(dot(-viewDir, viewNormal), 0.02);
+        // A thin water film on dark ground reads mostly as reflection: shallow water gets a stronger sheen.
+        float shallow = 1.0 - smoothstep(0.1, 0.8, waterDist);
+        float fresnel = fresnelSchlick(dot(-viewDir, viewNormal), mix(0.02, 0.09, shallow));
         vec3 reflection = vec3(0.0);
 #ifdef DIM_OVERWORLD
         vec3 reflectWorld = mat3(gbufferModelViewInverse) * reflectView;
@@ -165,6 +168,8 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
                 noise);
         skyRefl = skyRefl * clouds.a + clouds.rgb;
 #endif
+        // An overcast night sky still glows a little in reflections.
+        skyRefl = max(skyRefl, ambientLightColor() / PI * 0.5);
         reflection = skyRefl * smoothstep(0.3, 0.85, sky);
 #endif
 #if WATER_REFLECTIONS == 2 && SSR_STEPS > 0
@@ -176,7 +181,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float noi
         // Sun glitter.
         vec3 l = lightDirection();
         float spec = ggxSpecular(worldNormal, -normalize(surfacePlayer), l, 0.06);
-        result += directLightColor() * spec * smoothstep(0.5, 0.9, sky) * (1.0 - rainStrength * 0.7);
+        result += directLightColor() * spec * smoothstep(0.5, 0.9, sky) * cloudShadow(surfacePlayer, l);
 #endif
     }
 #endif

@@ -98,6 +98,9 @@ vec3 shade(Surface s, Lights lights, float noise) {
 #if defined SHADOWS && defined SHADOW_LOOKUP
         visibility = shadowVisibility(s.playerPos, s.normal, noise, foliage);
 #endif
+#if defined CLOUD_LOOKUP && CLOUDS > 0
+        visibility *= cloudShadow(s.playerPos, l);
+#endif
         direct = lights.direct / PI * diffuse * visibility * skyGate;
 #ifdef FOLIAGE_TRANSLUCENCY
         if (foliage) {

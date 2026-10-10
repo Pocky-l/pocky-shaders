@@ -6,6 +6,8 @@
 #ifdef DIM_OVERWORLD
 uniform sampler2D colortex7;
 #include "/lib/sky.glsl"
+#define CLOUD_LOOKUP
+#include "/lib/clouds.glsl"
 #define SHADOW_LOOKUP
 #include "/lib/shadow.glsl"
 #endif
@@ -25,17 +27,18 @@ flat in int blockId;
 layout(location = 0) out vec4 outTranslucent;
 layout(location = 1) out vec4 outWater;
 
-float packWater(vec3 tint, float sky) {
-    vec4 q = floor(saturate(vec4(tint, sky)) * 15.0 + 0.5);
-    return (q.r * 4096.0 + q.g * 256.0 + q.b * 16.0 + q.a) / 65535.0;
-}
-
 void main() {
     vec3 n = normalize(worldNormal);
     if (!gl_FrontFacing) {
         n = -n;
     }
 
+#ifdef DISTANT_HORIZONS
+    float edgeFade = smoothstep(far - 28.0, far - 4.0, length(playerPos.xz));
+    if (edgeFade > 0.0 && hash12(floor(gl_FragCoord.xy)) < edgeFade) {
+        discard;
+    }
+#endif
     if (blockId == ID_WATER) {
         vec3 worldPos = playerPos + cameraPosition;
         vec3 wn = n;

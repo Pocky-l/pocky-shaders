@@ -5,6 +5,8 @@
 #ifdef DIM_OVERWORLD
 uniform sampler2D colortex7;
 #include "/lib/sky.glsl"
+#define CLOUD_LOOKUP
+#include "/lib/clouds.glsl"
 #define SHADOW_LOOKUP
 #include "/lib/shadow.glsl"
 #endif
@@ -41,6 +43,12 @@ void main() {
     if (color.a < alphaTestRef) {
         discard;
     }
+#if defined PROG_TERRAIN && defined DISTANT_HORIZONS
+    float edgeFade = smoothstep(far - 28.0, far - 4.0, length(playerPos.xz));
+    if (edgeFade > 0.0 && hash12(floor(gl_FragCoord.xy)) < edgeFade) {
+        discard;
+    }
+#endif
 #if defined PROG_ENTITIES
     color.rgb = mix(color.rgb, entityColor.rgb, entityColor.a);
 #endif

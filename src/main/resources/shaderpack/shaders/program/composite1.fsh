@@ -41,7 +41,7 @@ float exposure() {
 #ifdef DIM_OVERWORLD
     // Scene brightness key of an average lit surface; 1.75 is a clear midday.
     float key = (luminance(directLightColor()) * 0.6 + luminance(ambientLightColor())) / PI;
-    float outdoor = clamp(pow(1.75 / max(key, 1e-3), 0.5), 0.9, 2.2);
+    float outdoor = clamp(pow(1.75 / max(key, 1e-3), 0.5), 0.9, 3.2);
 #else
     float outdoor = 1.0;
 #endif
@@ -51,7 +51,7 @@ float exposure() {
 void main() {
     vec3 color = texture(colortex0, texcoord).rgb;
 #ifdef BLOOM
-    float amount = (0.045 + rainStrength * 0.035 + float(isEyeInWater == 1) * 0.08) * BLOOM_STRENGTH;
+    float amount = (0.025 + rainStrength * 0.03 + float(isEyeInWater == 1) * 0.08) * BLOOM_STRENGTH;
     color = mix(color, bloom(texcoord), amount);
 #endif
     color *= exposure();
