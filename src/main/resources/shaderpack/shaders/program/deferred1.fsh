@@ -1,4 +1,5 @@
-// Applies ambient occlusion to the opaque scene, draws the sky behind it and volumetric clouds over both.
+// Applies ambient occlusion and far (screen-space) shadows to the opaque scene, draws the sky behind it and
+// volumetric clouds over both.
 
 #include "/lib/common.glsl"
 #include "/lib/atmosphere.glsl"
@@ -12,15 +13,6 @@ uniform sampler2D colortex7;
 uniform sampler2D colortex0;
 uniform sampler2D colortex1;
 uniform sampler2D colortex6;
-uniform sampler2D colortex8;
-uniform mat4 gbufferPreviousModelView;
-uniform mat4 gbufferPreviousProjection;
-uniform vec3 previousCameraPosition;
-
-/*
-const int colortex8Format = RGBA16F;
-const bool colortex8Clear = false;
-*/
 uniform sampler2D depthtex0;
 #ifdef DISTANT_HORIZONS
 uniform sampler2D dhDepthTex0;
@@ -29,9 +21,8 @@ uniform mat4 dhProjectionInverse;
 
 in vec2 texcoord;
 
-/* RENDERTARGETS: 0,8 */
+/* RENDERTARGETS: 0 */
 layout(location = 0) out vec4 outColor;
-layout(location = 1) out vec4 outClouds;
 
 float blurredAo(float depth) {
     vec2 px = 1.0 / vec2(viewWidth, viewHeight);
@@ -50,6 +41,52 @@ float blurredAo(float depth) {
     return sum / max(weight, 1e-4);
 }
 
+// View-space depth (negative z) of the nearest opaque surface, vanilla or DH; very far when there is none.
+float sceneViewZ(vec2 uv) {
+    float d = texture(depthtex0, uv).r;
+    if (d < 1.0) {
+        return screenToView(vec3(uv, d)).z;
+    }
+#ifdef DISTANT_HORIZONS
+    float dh = texture(dhDepthTex0, uv).r;
+    if (dh < 1.0) {
+        return projectAndDivide(dhProjectionInverse, vec3(uv, dh) * 2.0 - 1.0).z;
+    }
+#endif
+    return -1e6;
+}
+
+#if defined SHADOWS && defined DIM_OVERWORLD
+// Simplified shadows beyond the shadow map: march towards the light through the depth buffer.
+// Catches hills, trees and buildings on screen, which is what makes distant land look solid.
+float screenSpaceShadow(vec3 viewPos, vec3 viewLight, float noise) {
+    float dist = length(viewPos);
+    float stepLen = dist * 0.01 + 0.25;
+    vec3 p = viewPos + viewLight * stepLen * noise;
+    const int STEPS = 16;
+    for (int i = 0; i < STEPS; i++) {
+        p += viewLight * stepLen;
+        stepLen *= 1.18;
+        if (p.z > -near) {
+            break;
+        }
+        vec4 clip = gbufferProjection * vec4(p, 1.0);
+        vec2 uv = clip.xy / clip.w * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+            break;
+        }
+        float sceneZ = sceneViewZ(uv);
+        float diff = sceneZ - p.z;
+        // Something is in front of the ray point, and not so far in front that it is a separate object.
+        if (diff > 0.05 * stepLen && diff < stepLen * 3.0 + 1.5) {
+            vec2 edge = smoothstep(vec2(0.0), vec2(0.05), uv) * smoothstep(vec2(1.0), vec2(0.95), uv);
+            return edge.x * edge.y;
+        }
+    }
+    return 0.0;
+}
+#endif
+
 void main() {
     vec4 scene = texture(colortex0, texcoord);
     float depth = texture(depthtex0, texcoord).r;
@@ -59,25 +96,44 @@ void main() {
     sky = sky && dhDepth >= 1.0;
 #endif
 
-    vec3 color = scene.rgb;
-    if (!sky) {
-#ifdef SSAO
-        if (depth < 1.0) {
-            float encoded = texture(colortex1, texcoord).z * 65535.0;
-            int material = int(floor(encoded / 256.0 + 1e-3));
-            float ao = blurredAo(depth);
-            color *= material == MAT_HAND ? 1.0 : ao;
-        }
-#endif
-    }
-
-#ifdef DIM_OVERWORLD
     vec3 viewPos = screenToView(vec3(texcoord, sky ? 1.0 : depth));
 #ifdef DISTANT_HORIZONS
     if (!sky && depth >= 1.0) {
         viewPos = projectAndDivide(dhProjectionInverse, vec3(texcoord, dhDepth) * 2.0 - 1.0);
     }
 #endif
+
+    vec3 color = scene.rgb;
+    if (!sky) {
+        vec4 data = texture(colortex1, texcoord);
+        float encoded = data.z * 65535.0;
+        int material = int(floor(encoded / 256.0 + 1e-3));
+#ifdef SSAO
+        if (depth < 1.0 && material != MAT_HAND) {
+            color *= blurredAo(depth);
+        }
+#endif
+#if defined SHADOWS && defined DIM_OVERWORLD
+        // Beyond the shadow map, darken the share of the colour that comes from direct light.
+        vec3 playerPos = mat3(gbufferModelViewInverse) * viewPos + gbufferModelViewInverse[3].xyz;
+        vec3 shadowClip = projectAndDivide(shadowProjection, (shadowModelView * vec4(playerPos, 1.0)).xyz);
+        float farWeight = smoothstep(0.65, 0.95, max(abs(shadowClip.x), abs(shadowClip.y)));
+        vec3 viewLight = normalize(shadowLightPosition);
+        if (farWeight > 0.0 && material != MAT_HAND) {
+            float occluded = screenSpaceShadow(viewPos, viewLight, dither(gl_FragCoord.xy));
+            if (occluded > 0.0) {
+                vec3 n = decodeNormal(data.xy);
+                float skyLight = mod(encoded, 256.0) / 255.0;
+                float ambient = luminance(ambientLightColor()) * skyLight * skyLight * 0.85 + AMBIENT_MIN;
+                float direct = luminance(directLightColor()) * saturate(dot(n, viewLight)) * smoothstep(0.1, 0.45, skyLight);
+                float ambientShare = ambient / max(ambient + direct, 1e-4);
+                color *= mix(1.0, ambientShare, occluded * farWeight);
+            }
+        }
+#endif
+    }
+
+#ifdef DIM_OVERWORLD
     vec3 dir = normalize(mat3(gbufferModelViewInverse) * viewPos);
     float sceneDist = sky ? 1e6 : length(viewPos);
     vec3 sunDir = sunDirection();
@@ -87,29 +143,14 @@ void main() {
         color = sampleSkyLut(dir, sunDir) + scene.rgb * (1.0 - rainStrength);
     }
 
-    vec4 clouds = vec4(0.0, 0.0, 0.0, 1.0);
 #if CLOUDS > 0
     if (sky || cameraPosition.y > CLOUD_BOTTOM - 40.0 || dir.y > 0.0) {
-        clouds = cloudLayers(dir, sceneDist, lightDirection(), directLightColor(), ambientLightColor(), CLOUD_STEPS,
+        vec4 clouds = cloudLayers(dir, sceneDist, lightDirection(), directLightColor(), ambientLightColor(), CLOUD_STEPS,
                 dither(gl_FragCoord.xy));
 
-        // Where was this bit of cloud last frame? (Clouds are far: a point a typical cloud distance along the ray.)
-        float cloudDist = min(sceneDist, dir.y > 0.05 ? (0.5 * (CLOUD_BOTTOM + CLOUD_TOP) - cameraPosition.y) / dir.y : 2000.0);
-        vec3 prevRel = cameraPosition + dir * max(cloudDist, 50.0) - previousCameraPosition;
-        vec4 prevClip = gbufferPreviousProjection * (gbufferPreviousModelView * vec4(prevRel, 1.0));
-        vec2 prevUv = prevClip.xy / prevClip.w * 0.5 + 0.5;
-        if (prevClip.w > 0.0 && all(greaterThanEqual(prevUv, vec2(0.0))) && all(lessThanEqual(prevUv, vec2(1.0)))) {
-            vec4 history = texture(colortex8, prevUv);
-            float moved = length(cameraPosition - previousCameraPosition);
-            float keep = mix(0.88, 0.4, saturate(moved / 3.0));
-            clouds = mix(clouds, history, keep);
-        }
         color = color * clouds.a + clouds.rgb;
     }
 #endif
-    outClouds = clouds;
-#else
-    outClouds = vec4(0.0, 0.0, 0.0, 1.0);
 #endif
     outColor = vec4(color, 1.0);
 }

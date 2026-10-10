@@ -1,8 +1,7 @@
-// Bakes this frame's sky lookup table, light colours and cloud map into colortex7 (lib/atmosphere.glsl, lib/clouds.glsl).
+// Bakes this frame's sky lookup table, and light colours into colortex7 (see lib/atmosphere.glsl).
 
 #include "/lib/common.glsl"
 #include "/lib/atmosphere.glsl"
-#include "/lib/clouds.glsl"
 
 /*
 const int colortex7Format = RGBA16F;
@@ -64,13 +63,5 @@ void main() {
         return;
     }
 
-#if CLOUDS > 0
-    ivec2 mapPixel = pixel - CLOUD_MAP_ORIGIN;
-    if (all(greaterThanEqual(mapPixel, ivec2(0))) && all(lessThan(mapPixel, ivec2(CLOUD_MAP_SIZE)))) {
-        vec2 local = vec2(mapPixel) / float(CLOUD_MAP_SIZE - 1) - 0.5;
-        outSky = vec4(cloudColumn(cloudMapCenter() + local * CLOUD_MAP_SPAN), 0.0, 0.0, 1.0);
-        return;
-    }
-#endif
     discard;
 }

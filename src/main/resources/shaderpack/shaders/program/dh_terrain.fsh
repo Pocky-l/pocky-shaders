@@ -33,7 +33,7 @@ layout(location = 1) out vec4 outData;
 
 void main() {
     // Vanilla chunks cover the near range; DH only fills in beyond them.
-    if (length(playerPos.xz) < min(far * 0.8, far - 32.0)) {
+    if (length(playerPos) < min(far * 0.8, far - 32.0)) {
         discard;
     }
     vec3 n = normalize(worldNormal);
@@ -61,9 +61,9 @@ void main() {
     bool leaves = dhMaterial == DH_BLOCK_LEAVES;
     if (leaves && max(albedo.r, max(albedo.g, albedo.b)) < 0.01) {
         // Some leaves (birch, with colour handlers wrapped by other mods) reach DH without a colour: use foliage green.
-        albedo = srgbToLinear(vec3(0.5, 0.65, 0.33));
+        albedo = srgbToLinear(vec3(0.5, 0.655, 0.333) * 0.6);
     }
-    albedo = mix(vec3(luminance(albedo)), albedo, 0.85) * (leaves ? 0.62 : 0.85);
+    albedo *= leaves ? 0.85 : 0.95;
     float detail = 1.0 - smoothstep(180.0, 420.0, dist);
     vec3 cellPos = playerPos + cameraPosition - n * 0.01;
     float blockVariation = hash13(floor(cellPos)) - 0.5;

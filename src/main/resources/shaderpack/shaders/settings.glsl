@@ -6,7 +6,7 @@
 // Lighting
 #define SHADOWS
 const int shadowMapResolution = 2048; // [1024 1536 2048 3072 4096]
-const float shadowDistance = 128.0; // [64.0 96.0 128.0 160.0 192.0 256.0]
+const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0 512.0]
 #define SHADOW_SOFTNESS 1.0 // [0.5 0.75 1.0 1.5 2.0 3.0]
 #define COLORED_SHADOWS
 #define SSAO
