@@ -42,6 +42,11 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     }
 #endif
 
+    // Aerial perspective over the far (LOD) range: a light veil of sky colour that lowers the contrast of distant
+    // land, so coarse LODs read as far away instead of as a flat model.
+    float aerial = 0.3 * FAR_HAZE * smoothstep(far, far * 6.0, dist) * (1.0 - smoothstep(0.0, 0.6, playerPos.y / max(dist, 1.0)));
+    amount = 1.0 - (1.0 - amount) * (1.0 - aerial);
+
     // Hide the edge of the loaded world.
     float border = smoothstep(renderDistance * 0.72, renderDistance, dist);
     amount = max(amount, border);

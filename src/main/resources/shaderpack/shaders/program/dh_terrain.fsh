@@ -55,7 +55,9 @@ void main() {
     vec3 surfaceNormal = n;
     if (abs(n.y) > 0.5) {
         // Broad waves only: fine ripples at LOD distances alias into sparkling pixels.
-        surfaceNormal = waterNormal((playerPos + cameraPosition).xz, 0.35, 0.0);
+        // Waves flatten out with distance: smaller than a pixel they would only shimmer.
+        float calm = mix(0.35, 0.05, smoothstep(160.0, 480.0, dist));
+        surfaceNormal = waterNormal((playerPos + cameraPosition).xz, calm, 0.0);
         surfaceNormal.y *= sign(n.y);
     }
     // LOD water colour is the averaged texture times the biome tint, darker than the vertex tint of vanilla water:

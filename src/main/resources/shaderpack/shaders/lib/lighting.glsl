@@ -95,8 +95,10 @@ vec3 shade(Surface s, Lights lights, float noise) {
     float skyGate = smoothstep(0.1, 0.45, sky);
     if (diffuse > 0.0 && skyGate > 0.0 && dot(lights.direct, vec3(1.0)) > 1e-4) {
         vec3 visibility = vec3(1.0);
-#if defined SHADOWS && defined SHADOW_LOOKUP
+#ifdef SHADOWS
+#ifdef SHADOW_LOOKUP
         visibility = shadowVisibility(s.playerPos, s.normal, noise, foliage);
+#endif
 #endif
 #if defined CLOUD_LOOKUP && CLOUDS > 0
         visibility *= cloudShadow(s.playerPos, l);

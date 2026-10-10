@@ -37,6 +37,7 @@ const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0
 #define LIGHT_SHAFT_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
 #define FOG_DENSITY 1.0 // [0.0 0.25 0.5 0.75 1.0 1.5 2.0]
 #define VALLEY_MIST
+#define FAR_HAZE 1.0 // [0.0 0.5 1.0 1.5 2.0]
 
 // Post processing
 #define BLOOM
@@ -45,6 +46,8 @@ const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0
 #define SATURATION 1.0 // [0.6 0.8 0.9 1.0 1.1 1.2 1.4]
 #define WARMTH 1.0 // [0.0 0.5 1.0 1.5 2.0]
 #define FXAA
+#define DISTANT_SOFTENING
+#define DISTANT_SOFTENING_STRENGTH 1.0 // [0.5 0.75 1.0 1.5 2.0]
 
 // Debug: 1 = colour each pixel by who drew it (vanilla chunks / Distant Horizons / water).
 #define DEBUG_VIEW 0 // [0 1]
@@ -57,22 +60,26 @@ const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 3
     #define SSR_STEPS 0
     #define SKY_STEPS 6
     #define CLOUD_STEPS 10
+    #define SOFTEN_TAPS 6
 #elif QUALITY == 1
     #define SHADOW_SAMPLES 8
     #define SSAO_SAMPLES 6
     #define SSR_STEPS 16
     #define SKY_STEPS 8
     #define CLOUD_STEPS 14
+    #define SOFTEN_TAPS 8
 #elif QUALITY == 2
     #define SHADOW_SAMPLES 12
     #define SSAO_SAMPLES 8
     #define SSR_STEPS 24
     #define SKY_STEPS 10
     #define CLOUD_STEPS 20
+    #define SOFTEN_TAPS 10
 #else
     #define SHADOW_SAMPLES 16
     #define SSAO_SAMPLES 12
     #define SSR_STEPS 32
     #define SKY_STEPS 12
     #define CLOUD_STEPS 28
+    #define SOFTEN_TAPS 12
 #endif
