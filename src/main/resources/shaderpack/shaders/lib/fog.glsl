@@ -1,8 +1,10 @@
 // Atmospheric haze, valley mist, rain and cave fog, applied over the finished scene.
 // Needs common, atmosphere and sky.
 
-float fogDensity() {
-    return FOG_DENSITY * (0.00035 + rainStrength * 0.0045);
+// Optical depth of the air over a distance: clear haze, plus rain that starts a little away from the player (the
+// air right around you stays clear, the curtain builds up beyond it).
+float fogOpticalDepth(float dist) {
+    return FOG_DENSITY * (0.00035 * dist + rainStrength * 0.0045 * max(dist - 16.0, 0.0));
 }
 
 // Fog for a surface at playerPos (relative to the camera). Returns the scene colour with fog applied.
@@ -20,13 +22,12 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     vec3 caveCol = vec3(0.006, 0.007, 0.009);
     fogCol = mix(caveCol, fogCol, smoothstep(0.05, 0.6, eyeSky));
 
-    float density = fogDensity();
     // Thinner air higher up: integrate the exponential height profile along the view ray.
     float y0 = cameraPosition.y - 63.0;
     float falloff = 0.012;
     float dy = playerPos.y * falloff;
     float heightTerm = exp(-max(y0, -40.0) * falloff) * (abs(dy) > 1e-3 ? (1.0 - exp(-dy)) / dy : 1.0);
-    float amount = 1.0 - exp(-dist * density * clamp(heightTerm, 0.02, 4.0));
+    float amount = 1.0 - exp(-fogOpticalDepth(dist) * clamp(heightTerm, 0.02, 4.0));
 
     // Low haze: moist air settling over water and in low land. Its density falls off quickly above sea level, so it
     // fills the sea and the valleys between hills while peaks rise out of it, and it builds up with distance (the
@@ -43,14 +44,15 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
         float banks = 0.7 + 0.6 * valueNoise(mid / 220.0 + frameTimeCounter * vec2(0.004, 0.002));
         // A touch thicker in the cool morning and evening air, thinner around noon.
         float humidity = mix(1.25, 0.85, smoothstep(0.15, 0.6, sunDir.y));
-        float hazeDensity = 0.0016 * LOW_HAZE * banks * humidity;
+        // Rain fog takes over in rain: the layers would only stack into milk.
+        float hazeDensity = 0.0016 * LOW_HAZE * banks * humidity * (1.0 - rainStrength);
         hazeAmount = (1.0 - exp(-dist * hazeDensity * clamp(hazeHeight, 0.0, 6.0))) * smoothstep(0.05, 0.6, eyeSky);
     }
 
 #ifdef VALLEY_MIST
-    // Low morning mist in valleys and over water; also in rain.
+    // Low morning mist in valleys and over water (rain fog replaces it in rain).
     float morning = smoothstep(0.35, 0.05, sunDir.y) * smoothstep(-0.12, 0.02, sunDir.y);
-    float mistStrength = (morning * 0.9 + rainStrength * 0.5) * FOG_DENSITY;
+    float mistStrength = morning * 0.9 * (1.0 - rainStrength) * FOG_DENSITY;
     if (mistStrength > 0.0) {
         float mistFalloff = 0.09;
         float mdy = playerPos.y * mistFalloff;

@@ -20,6 +20,8 @@ uniform float frameTimeCounter;
 uniform float rainStrength;
 uniform float wetness;
 uniform float thunderStrength;
+// Iris: a lightning bolt relative to the camera, w = 1 while one exists.
+uniform vec4 lightningBoltPosition;
 uniform float viewWidth;
 uniform float viewHeight;
 uniform float near;

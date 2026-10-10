@@ -25,9 +25,10 @@ float moonPhaseLight() {
     return mix(0.15, 1.0, lit);
 }
 
-// Rain fills the air with droplets (more Mie haze) and greys the sky out.
+// Rain fills the air with droplets: a little more Mie haze in what is left of the clear sky (the overcast model
+// below takes over the sky itself).
 float hazeFactor() {
-    return 1.0 + rainStrength * 7.0;
+    return 1.0 + rainStrength * 2.0;
 }
 
 float rayleighPhase(float mu) {
@@ -107,17 +108,66 @@ vec3 scatterAlong(vec3 dir, vec3 lightDir, vec3 illuminance, int steps) {
     return result * illuminance;
 }
 
-vec3 rainGrey(vec3 color) {
-    float l = luminance(color);
-    return mix(color, vec3(l) * vec3(0.92, 0.96, 1.0), rainStrength * 0.75) * (1.0 - rainStrength * 0.5) * (1.0 - thunderStrength * 0.45);
+// --- Weather ----------------------------------------------------------------------------------------------------
+
+// Brightness of a lightning flash right now (0 without one): a bolt flickers in a few strokes. One value per frame,
+// the same for every pixel.
+float lightningFlash() {
+    if (lightningBoltPosition.w < 0.5) {
+        return 0.0;
+    }
+    float stroke = hash12(vec2(floor(frameTimeCounter * 14.0), 7.0));
+    return 0.35 + 0.65 * step(0.45, stroke);
 }
 
-// Full sky radiance (sun + moon scattering + faint airglow), in world space directions.
+const vec3 FLASH_TINT = vec3(0.8, 0.86, 1.0);
+
+// Sky radiance a flash adds to the cloud deck (zenith value; it follows the overcast shape).
+vec3 flashSkyRadiance() {
+    return FLASH_TINT * lightningFlash() * 0.9 * rainStrength;
+}
+
+// Overcast sky: brightness relative to the zenith (a softened CIE overcast sky - the horizon is darker than the
+// zenith, never a glowing band).
+float overcastShape(float elevation) {
+    return (1.0 + 1.2 * saturate(elevation)) / 2.2;
+}
+
+// cos-weighted mean of overcastShape over the sky, x the ambient's multiple scattering factor (1.4) x pi.
+const float OVERCAST_IRRADIANCE = 1.4 * PI * 0.818;
+
+// All light that sun and moon would bring to the ground on a clear day (direct + sky, lux-like units, fitted to
+// the clear-sky values of this atmosphere). An overcast deck spreads a share of it evenly over the sky.
+float clearDaylight(vec3 sunDir) {
+    float sunY = sunDir.y;
+    float day = luminance(SUN_ILLUMINANCE * exp(-((RAYLEIGH_BETA + OZONE_PER_RAYLEIGH) * RAYLEIGH_HEIGHT
+            + MIE_BETA * 1.11 * MIE_HEIGHT) * airMass(sunY))) * max(sunY, 0.0)
+            + 1.1 * smoothstep(-0.12, 0.35, sunY);
+    float night = MOON_ILLUMINANCE * moonPhaseLight() * (0.3 * max(-sunY, 0.0) + 0.04) * smoothstep(0.05, -0.1, sunY);
+    return day + night;
+}
+
+// Zenith radiance of the overcast deck: rain lets about a fifth of the daylight through, a thunderstorm a tenth.
+vec3 overcastZenith(vec3 sunDir) {
+    float through = mix(0.2, 0.1, thunderStrength);
+    vec3 tint = mix(vec3(0.93, 0.97, 1.05), vec3(0.8, 0.87, 1.0), thunderStrength);
+    return tint * clearDaylight(sunDir) * through / OVERCAST_IRRADIANCE + flashSkyRadiance();
+}
+
+// Full sky radiance (sun + moon scattering + faint airglow), in world space directions; rain blends in the overcast
+// deck.
 vec3 skyRadiance(vec3 dir, vec3 sunDir, int steps) {
     vec3 sky = scatterAlong(dir, sunDir, vec3(SUN_ILLUMINANCE), steps);
     sky += scatterAlong(dir, -sunDir, MOON_TINT * MOON_ILLUMINANCE * moonPhaseLight(), steps / 2 + 1);
-    sky = sky * SKY_RADIANCE_SCALE + vec3(0.0016, 0.0022, 0.0038) * (1.0 + 2.0 * saturate(dir.y));
-    return rainGrey(sky);
+    vec3 airglow = vec3(0.0016, 0.0022, 0.0038) * (1.0 + 2.0 * saturate(dir.y));
+    sky = sky * SKY_RADIANCE_SCALE + airglow;
+    if (rainStrength > 0.0) {
+        // Below the horizon (reflections, fog looking down) the deck's light is what the ground bounces back.
+        float shape = dir.y >= 0.0 ? overcastShape(dir.y) : overcastShape(0.0) * 0.8;
+        vec3 overcast = overcastZenith(sunDir) * shape + airglow;
+        sky = mix(sky, overcast, rainStrength);
+    }
+    return sky;
 }
 
 // --- Sky lookup table in colortex7 -----------------------------------------------------------------------------

@@ -112,6 +112,15 @@ vec3 shade(Surface s, Lights lights, float noise) {
         }
 #endif
     }
+    // A lightning bolt lights its surroundings from the side (the sky flash itself comes with the ambient light).
+    float flash = lightningFlash();
+    if (flash > 0.0 && skyGate > 0.0) {
+        // The channel's brightest part is some way up.
+        vec3 toBolt = lightningBoltPosition.xyz + vec3(0.0, 24.0, 0.0) - s.playerPos;
+        float d = length(toBolt);
+        float facing = foliage ? 0.7 : saturate(dot(s.normal, toBolt / d)) * 0.8 + 0.2;
+        direct += FLASH_TINT * flash * 25.0 / (1.0 + sqr(d / 48.0)) / PI * facing * skyGate;
+    }
 #endif
 
     vec3 color = s.albedo * ((ambient + block) * s.ao + direct);

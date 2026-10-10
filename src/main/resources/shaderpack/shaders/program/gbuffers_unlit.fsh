@@ -59,9 +59,10 @@ void main() {
     if (color.a < 0.01) {
         discard;
     }
-    // Lit like the world around it, so rain curtains darken with a storm instead of glowing in it.
+    // Lit like the world around it, so rain curtains darken with a storm instead of glowing in it; streaks catch
+    // light from the whole sky and show a little brighter than the air behind them.
     #ifdef DIM_OVERWORLD
-    vec3 light = (ambientLightColor() * 0.9 + directLightColor() * 0.2) / PI * lightmap.y * lightmap.y;
+    vec3 light = (ambientLightColor() * 1.25 + directLightColor() * 0.2) / PI * lightmap.y * lightmap.y;
     #else
     vec3 light = vec3(0.3) * lightmap.y;
     #endif

@@ -110,7 +110,8 @@ void main() {
         int material = int(floor(encoded / 256.0 + 1e-3));
 #ifdef SSAO
         if (depth < 1.0 && material != MAT_HAND) {
-            color *= blurredAo(depth);
+            // Under an overcast sky shapes come only from occlusion: a bit more of it in rain.
+            color *= pow(blurredAo(depth), 1.0 + 0.5 * rainStrength);
         }
 #endif
 #if defined SHADOWS && defined DIM_OVERWORLD

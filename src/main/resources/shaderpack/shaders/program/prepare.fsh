@@ -47,7 +47,9 @@ void main() {
             vec3 moon = MOON_ILLUMINANCE * moonPhaseLight() * MOON_TINT * directTransmittance(-sunDir.y);
             value = (sun + moon) * (1.0 - rainStrength * 0.88) * (1.0 - thunderStrength * 0.9);
         } else if (pixel.x == PIXEL_AMBIENT_COLOR.x) {
-            value = max(ambientIrradiance(sunDir), vec3(0.05, 0.06, 0.08) * (1.0 + rainStrength * 0.6));
+            // Rainy nights keep a little more light (only at night: by day the overcast deck sets the level).
+            float night = smoothstep(0.05, -0.1, sunDir.y);
+            value = max(ambientIrradiance(sunDir), vec3(0.05, 0.06, 0.08) * (1.0 + rainStrength * 0.6 * night));
         } else {
             value = SUN_ILLUMINANCE * directTransmittance(sunDir.y) * (1.0 - rainStrength) * (1.0 - thunderStrength);
         }

@@ -1,15 +1,19 @@
 // Near-vanilla clouds: blocky cells of 12 x 12 blocks, 4 blocks thick, at the vanilla cloud height, drifting the
 // vanilla way - but lit by the sun and sky (bright tops, shaded bottoms, sunlit sides), with translucent thin edges
-// and haze in the distance. The same cells cast the shadows on the ground. A player can fly through them.
+// and haze in the distance. Rain closes them into a thicker deck, a thunderstorm into a dark solid one. The same
+// cells cast the shadows on the ground. A player can fly through them.
 
 const float CLOUD_BOTTOM = 192.0;
-const float CLOUD_TOP = 196.0;
+
+float cloudTop() {
+    return CLOUD_BOTTOM + 4.0 + rainStrength * 4.0 + thunderStrength * 6.0;
+}
 const float CLOUD_CELL = 12.0;
 // Vanilla clouds move 0.03 blocks per tick towards +x.
 const float CLOUD_SPEED = 0.6;
 
 float cloudCoverage() {
-    return saturate(0.38 * CLOUD_COVERAGE + rainStrength * 0.25 + thunderStrength * 0.15);
+    return saturate(0.38 * CLOUD_COVERAGE + rainStrength * 0.4 + thunderStrength * 0.35);
 }
 
 vec2 cloudOffset() {
@@ -51,10 +55,10 @@ float cloudShadowCover(vec2 worldXZ) {
 float cloudShadow(vec3 playerPos, vec3 lightDir) {
 #if CLOUDS > 0
     vec3 worldPos = playerPos + cameraPosition;
-    if (lightDir.y < 0.05 || worldPos.y > CLOUD_TOP) {
+    if (lightDir.y < 0.05 || worldPos.y > cloudTop()) {
         return 1.0;
     }
-    float h = 0.5 * (CLOUD_BOTTOM + CLOUD_TOP);
+    float h = 0.5 * (CLOUD_BOTTOM + cloudTop());
     vec2 p = worldPos.xz + lightDir.xz * ((h - worldPos.y) / lightDir.y);
     // Light scattered around a small cloud keeps its shadow soft; the shadow fades as the sun gets low.
     float strength = 0.6 * smoothstep(0.05, 0.3, lightDir.y);
@@ -67,10 +71,23 @@ float cloudShadow(vec3 playerPos, vec3 lightDir) {
 // Light reflected by a cloud face with the given normal.
 vec3 cloudFaceLight(vec3 n, vec3 lightDir, vec3 directColor, vec3 ambientColor) {
     float up = n.y * 0.5 + 0.5;
-    vec3 sky = ambientColor / PI * mix(0.4, 1.1, up);
+    // Under an overcast deck the light comes from everywhere: bases stay close to the sky's brightness (a little
+    // darker, darker still in a storm) instead of turning into a black lid with bright gaps.
+    float skyShare = mix(mix(0.4, 1.1, up), 0.8, rainStrength);
+    vec3 sky = ambientColor / PI * skyShare;
     // Clouds are not opaque: light through the cell keeps shaded faces from going grey.
     vec3 sun = directColor / PI * (saturate(dot(n, lightDir)) * 0.75 + 0.08 + 0.12 * up);
-    return (sky + sun) * mix(vec3(1.0), vec3(0.55), rainStrength) * (1.0 - thunderStrength * 0.4);
+    return (sky + sun) * (1.0 - thunderStrength * 0.25);
+}
+
+// A lightning flash lights the deck from inside, brightest around the bolt.
+vec3 cloudFlash(vec3 worldPos) {
+    float flash = lightningFlash();
+    if (flash <= 0.0) {
+        return vec3(0.0);
+    }
+    float d = length(worldPos.xz - (cameraPosition.xz + lightningBoltPosition.xz));
+    return FLASH_TINT * flash * (0.4 + 3.0 * exp(-d / 180.0));
 }
 
 // Clouds along a world-space ray from the camera up to maxDist. rgb: cloud light, a: transmittance behind.
@@ -79,14 +96,14 @@ vec4 cloudLayersFrom(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 d
     float t0;
     float t1;
     if (abs(dir.y) < 1e-5) {
-        if (origin.y < CLOUD_BOTTOM || origin.y > CLOUD_TOP) {
+        if (origin.y < CLOUD_BOTTOM || origin.y > cloudTop()) {
             return vec4(0.0, 0.0, 0.0, 1.0);
         }
         t0 = 0.0;
         t1 = 1e6;
     } else {
         float tb = (CLOUD_BOTTOM - origin.y) / dir.y;
-        float tt = (CLOUD_TOP - origin.y) / dir.y;
+        float tt = (cloudTop() - origin.y) / dir.y;
         t0 = max(min(tb, tt), 0.0);
         t1 = max(tb, tt);
     }
@@ -100,7 +117,7 @@ vec4 cloudLayersFrom(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 d
     // Flat: one plane at the cloud base, like vanilla "Fast" clouds.
     vec2 p = origin.xz + dir.xz * t0;
     float cover = cloudCover(p);
-    vec3 col = cloudFaceLight(vec3(0.0, -sign(dir.y), 0.0), lightDir, directColor, ambientColor);
+    vec3 col = cloudFaceLight(vec3(0.0, -sign(dir.y), 0.0), lightDir, directColor, ambientColor) + cloudFlash(vec3(p.x, 0.0, p.y));
     float a = cover * 0.85 * (1.0 - smoothstep(RANGE * 0.5, RANGE, t0));
     return vec4(col * a, 1.0 - a);
 #else
@@ -131,12 +148,24 @@ vec4 cloudLayersFrom(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 d
             faceNormal = entryNormal;
         }
         inside = occupied;
-        if (occupied) {
+        // Far away a cell gets smaller than a pixel and the hard cell pattern turns into rings (moire): blend it
+        // into the smooth cell density and the plain slab-face shading.
+        float lod = smoothstep(300.0, 900.0, t);
+        float density = occupied ? 1.0 : 0.0;
+        vec3 mid = origin + dir * (0.5 * (t + tNext));
+        if (lod > 0.0) {
+            density = mix(density, cloudShadowCover(mid.xz), lod);
+        }
+        if (density > 0.0) {
             float len = tNext - t;
             // Thin slices (grazing edges) are see-through, a full cell is nearly opaque.
-            float a = 1.0 - exp(-len * 0.3);
+            float a = (1.0 - exp(-len * 0.3)) * density;
             float haze = smoothstep(RANGE * 0.45, RANGE, t);
             vec3 c = cloudFaceLight(faceNormal, lightDir, directColor, ambientColor);
+            if (lod > 0.0) {
+                c = mix(c, cloudFaceLight(vec3(0.0, -sign(dir.y), 0.0), lightDir, directColor, ambientColor), lod);
+            }
+            c += cloudFlash(mid);
             light += c * a * transmittance * (1.0 - haze);
             transmittance *= 1.0 - a * (1.0 - haze);
             if (transmittance < 0.02) {

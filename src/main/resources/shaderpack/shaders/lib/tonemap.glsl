@@ -10,11 +10,13 @@ vec3 filmicCurve(vec3 x) {
 }
 
 vec3 grade(vec3 color) {
-    // Gentle warm white balance: lifts reds, holds back blues.
-    vec3 warm = vec3(1.0 + 0.04 * WARMTH, 1.0 + 0.01 * WARMTH, 1.0 - 0.05 * WARMTH);
-    color *= warm;
+    // Gentle warm white balance: lifts reds, holds back blues. Rain cools it down and takes some colour out - a
+    // warm grade turns a grey storm sickly yellow-green.
+    float warmth = WARMTH * (1.0 - 0.85 * rainStrength);
+    vec3 warm = vec3(1.0 + 0.04 * warmth, 1.0 + 0.01 * warmth, 1.0 - 0.05 * warmth);
+    color *= warm * mix(vec3(1.0), vec3(0.97, 1.0, 1.04), rainStrength);
     float l = luminance(color);
-    color = max(mix(vec3(l), color, SATURATION), 0.0);
+    color = max(mix(vec3(l), color, SATURATION * (1.0 - 0.12 * rainStrength - 0.08 * thunderStrength)), 0.0);
     return color;
 }
 

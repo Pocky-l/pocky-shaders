@@ -39,9 +39,13 @@ vec3 bloom(vec2 uv) {
 float exposure() {
     float eyeSky = smoothstep(0.0, 0.7, float(eyeBrightnessSmooth.y) / 240.0);
 #ifdef DIM_OVERWORLD
-    // Scene brightness key of an average lit surface; 1.75 is a clear midday.
-    float key = (luminance(directLightColor()) * 0.6 + luminance(ambientLightColor())) / PI;
-    float outdoor = clamp(pow(1.75 / max(key, 1e-3), 0.5), 0.9, 3.2);
+    // Scene brightness key of an average lit surface; 1.75 is a clear midday. A lightning flash is left out, so the
+    // eye does not adapt to it and the flash shows. Rain and storms aim lower: they should feel gloomy, not like a
+    // grey day brightened up to noon.
+    float flash = luminance(flashSkyRadiance()) * OVERCAST_IRRADIANCE;
+    float key = (luminance(directLightColor()) * 0.6 + max(luminance(ambientLightColor()) - flash, 0.0)) / PI;
+    float target = 1.75 * mix(1.0, 0.62, rainStrength) * mix(1.0, 0.75, thunderStrength);
+    float outdoor = clamp(pow(target / max(key, 1e-3), 0.5), 0.9, 3.2);
 #else
     float outdoor = 1.0;
 #endif
