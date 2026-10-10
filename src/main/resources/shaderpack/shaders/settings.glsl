@@ -48,8 +48,6 @@ const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0
 #define BLOOM_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
 #define LENS_FLARE
 #define LENS_FLARE_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
-#define CINEMATIC_GLARE
-#define GLARE_STRENGTH 1.0 // [0.0 0.5 0.75 1.0 1.25 1.5 2.0]
 #define EXPOSURE 1.0 // [0.6 0.8 1.0 1.2 1.4 1.6]
 #define SATURATION 1.0 // [0.6 0.8 0.9 1.0 1.1 1.2 1.4]
 #define WARMTH 1.0 // [0.0 0.5 1.0 1.5 2.0]
@@ -91,8 +89,6 @@ const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0
 #ifdef BLOOM
 #endif
 #ifdef LENS_FLARE
-#endif
-#ifdef CINEMATIC_GLARE
 #endif
 #ifdef FXAA
 #endif
