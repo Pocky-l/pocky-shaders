@@ -59,22 +59,34 @@ const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 3
     #define SSR_STEPS 0
     #define SKY_STEPS 6
     #define CLOUD_STEPS 10
+    #define LIGHT_SHAFT_STEPS 8
+    #define SS_SHADOW_STEPS 10
+    #define SS_SHADOW_GROWTH 1.73
 #elif QUALITY == 1
     #define SHADOW_SAMPLES 8
     #define SSAO_SAMPLES 6
     #define SSR_STEPS 16
     #define SKY_STEPS 8
     #define CLOUD_STEPS 14
+    #define LIGHT_SHAFT_STEPS 12
+    #define SS_SHADOW_STEPS 14
+    #define SS_SHADOW_GROWTH 1.43
 #elif QUALITY == 2
     #define SHADOW_SAMPLES 12
     #define SSAO_SAMPLES 8
     #define SSR_STEPS 24
     #define SKY_STEPS 10
     #define CLOUD_STEPS 20
+    #define LIGHT_SHAFT_STEPS 16
+    #define SS_SHADOW_STEPS 20
+    #define SS_SHADOW_GROWTH 1.25
 #else
     #define SHADOW_SAMPLES 16
     #define SSAO_SAMPLES 12
     #define SSR_STEPS 32
     #define SKY_STEPS 12
     #define CLOUD_STEPS 28
+    #define LIGHT_SHAFT_STEPS 20
+    #define SS_SHADOW_STEPS 24
+    #define SS_SHADOW_GROWTH 1.19
 #endif

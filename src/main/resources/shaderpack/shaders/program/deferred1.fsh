@@ -63,10 +63,11 @@ float screenSpaceShadow(vec3 viewPos, vec3 viewLight, float noise) {
     // World-space steps (not scaled by the distance to the camera), so the shadows stay put when the camera moves.
     float stepLen = 0.6;
     vec3 p = viewPos + viewLight * stepLen * noise;
-    const int STEPS = 20;
+    // Fewer, longer steps on lower presets; the growth keeps the reach at about 200 blocks.
+    const int STEPS = SS_SHADOW_STEPS;
     for (int i = 0; i < STEPS; i++) {
         p += viewLight * stepLen;
-        stepLen *= 1.25;
+        stepLen *= SS_SHADOW_GROWTH;
         if (p.z > -near) {
             break;
         }

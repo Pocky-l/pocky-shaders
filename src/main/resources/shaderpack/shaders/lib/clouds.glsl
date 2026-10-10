@@ -27,8 +27,57 @@ bool cloudCellAt(vec2 cell, float coverage, float seed) {
     return n > 1.0 - coverage;
 }
 
+// Storm mottling of a cell: thicker, darker cells next to thinner, lighter ones (0..1).
+float cloudMottle(vec2 cell, float seed) {
+    return valueNoise(cell * 0.09 + seed + 40.0) * 0.7 + hash12(cell + seed + 3.0) * 0.3;
+}
+
+// --- Cloud map (colortex7, CLOUD_MAP_SIZE^2 texels from CLOUD_MAP_ORIGIN) --------------------------------------
+// The prepare pass stores, for each layer, the cells around the camera's cell (texel = cell mod size): r = main
+// occupancy, g = main mottle, b = scud occupancy, a = scud mottle. Lookups farther than half the map, and windows
+// too small to hold it, fall back to computing the cell.
+const ivec2 CLOUD_MAP_ORIGIN = ivec2(66, 1);
+const int CLOUD_MAP_SIZE = 256;
+
+// The cell congruent to a map texel that lies nearest to the centre cell.
+vec2 cloudMapCell(ivec2 texel, vec2 centre) {
+    vec2 d = mod(vec2(texel) - centre, float(CLOUD_MAP_SIZE));
+    d -= step(float(CLOUD_MAP_SIZE / 2), d) * float(CLOUD_MAP_SIZE);
+    return centre + d;
+}
+
+#ifdef CLOUD_LOOKUP
+bool cloudMapAvailable() {
+    return viewWidth >= float(CLOUD_MAP_ORIGIN.x + CLOUD_MAP_SIZE) && viewHeight >= float(CLOUD_MAP_ORIGIN.y + CLOUD_MAP_SIZE);
+}
+
+// Map texel of a cell, or false when it is not in the map.
+bool cloudMapTexel(vec2 cell, vec2 centre, out ivec2 texel) {
+    vec2 d = cell - centre;
+    texel = CLOUD_MAP_ORIGIN + ivec2(mod(cell, float(CLOUD_MAP_SIZE)));
+    return cloudMapAvailable() && all(lessThan(abs(d), vec2(float(CLOUD_MAP_SIZE / 2) - 0.5)));
+}
+#endif
+
+// Centre cell of a layer's map: the cell under the camera.
+vec2 cloudMapCentre(vec2 offset, float cellSize) {
+    return floor((cameraPosition.xz + offset) / cellSize);
+}
+
+// Occupancy (x) and mottle (y) of a cell of the main layer (scud = false) or the scud layer.
+vec2 cloudCellData(vec2 cell, bool scud, float coverage, float seed, vec2 offset, float cellSize) {
+#ifdef CLOUD_LOOKUP
+    ivec2 texel;
+    if (cloudMapTexel(cell, cloudMapCentre(offset, cellSize), texel)) {
+        vec4 v = texelFetch(colortex7, texel, 0);
+        return scud ? v.ba : v.rg;
+    }
+#endif
+    return vec2(cloudCellAt(cell, coverage, seed) ? 1.0 : 0.0, cloudMottle(cell, seed));
+}
+
 bool cloudCell(vec2 cell) {
-    return cloudCellAt(cell, cloudCoverage(), 0.0);
+    return cloudCellData(cell, false, cloudCoverage(), 0.0, cloudOffset(), CLOUD_CELL).x > 0.5;
 }
 
 // One slab of blocky clouds.
@@ -40,17 +89,22 @@ struct CloudLayer {
     float coverage;
     float seed;
     float brightness;
+    bool scud;
 };
 
 CloudLayer mainCloudLayer() {
-    return CloudLayer(CLOUD_BOTTOM, cloudTop(), CLOUD_CELL, cloudOffset(), cloudCoverage(), 0.0, 1.0);
+    return CloudLayer(CLOUD_BOTTOM, cloudTop(), CLOUD_CELL, cloudOffset(), cloudCoverage(), 0.0, 1.0, false);
+}
+
+vec2 scudOffset() {
+    return frameTimeCounter * vec2(2.4, 0.7);
 }
 
 // Storm scud: ragged low cells racing under the deck (constant speed, so a change of weather never makes them jump;
 // they appear through their coverage).
 CloudLayer scudCloudLayer() {
     float coverage = saturate(thunderStrength * 0.62 + rainStrength * 0.2 - 0.15);
-    return CloudLayer(150.0, 153.0, 8.0, frameTimeCounter * vec2(2.4, 0.7), coverage, 31.7, 0.72);
+    return CloudLayer(150.0, 153.0, 8.0, scudOffset(), coverage, 31.7, 0.72, true);
 }
 
 // Soft occupancy at a world position (bilinear between cells), used for flat clouds.
@@ -161,7 +215,8 @@ vec4 cloudSlab(CloudLayer layer, vec3 origin, vec3 dir, float maxDist, vec3 ligh
     bool inside = false;
     for (int i = 0; i < maxCells; i++) {
         float tNext = min(t0 + min(nextBoundary.x, nextBoundary.y), t1);
-        bool occupied = cloudCellAt(cell, layer.coverage, layer.seed);
+        vec2 data = cloudCellData(cell, layer.scud, layer.coverage, layer.seed, layer.offset, layer.cell);
+        bool occupied = data.x > 0.5;
         if (occupied && !inside) {
             faceNormal = entryNormal;
         }
@@ -171,7 +226,7 @@ vec4 cloudSlab(CloudLayer layer, vec3 origin, vec3 dir, float maxDist, vec3 ligh
         float lod = smoothstep(300.0, 900.0, t);
         float density = occupied ? 1.0 : 0.0;
         vec3 mid = origin + dir * (0.5 * (t + tNext));
-        if (lod > 0.0 && layer.seed == 0.0) {
+        if (lod > 0.0 && !layer.scud) {
             density = mix(density, cloudShadowCover(mid.xz), lod);
         }
         if (density > 0.0) {
@@ -185,9 +240,7 @@ vec4 cloudSlab(CloudLayer layer, vec3 origin, vec3 dir, float maxDist, vec3 ligh
                 c = mix(c, cloudFaceLight(slabFace, lightDir, directColor, ambientColor), lod);
             }
             // Rain clouds are mottled: thicker, darker cells next to thinner, lighter ones give the deck a shape.
-            vec2 shadeCell = floor((mid.xz + layer.offset) / layer.cell);
-            float mottle = valueNoise(shadeCell * 0.09 + layer.seed + 40.0) * 0.7 + hash12(shadeCell + 3.0) * 0.3;
-            c *= layer.brightness * mix(1.0, 0.55 + 0.8 * mottle, rainStrength);
+            c *= layer.brightness * mix(1.0, 0.55 + 0.8 * data.y, rainStrength);
             c += cloudFlash(mid);
             light += c * a * transmittance * (1.0 - haze);
             transmittance *= 1.0 - a * (1.0 - haze);
@@ -243,6 +296,29 @@ vec4 cloudLayersFrom(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 d
     vec4 front = origin.y < scud.top ? low : deck;
     vec4 back = origin.y < scud.top ? deck : low;
     return vec4(front.rgb + back.rgb * front.a, front.a * back.a);
+#else
+    return vec4(0.0, 0.0, 0.0, 1.0);
+#endif
+}
+
+// Clouds seen in a reflection: the deck base as a flat plane (one smooth lookup instead of walking the cells; the
+// rippled water hides the difference).
+vec4 cloudReflection(vec3 origin, vec3 dir, vec3 lightDir, vec3 directColor, vec3 ambientColor) {
+#if CLOUDS > 0
+    if (dir.y < 1e-3 || origin.y > CLOUD_BOTTOM) {
+        return vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    float t = (CLOUD_BOTTOM - origin.y) / dir.y;
+    const float RANGE = 2400.0;
+    if (t > RANGE) {
+        return vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    vec2 p = origin.xz + dir.xz * t;
+    float cover = cloudShadowCover(p);
+    vec3 col = cloudFaceLight(vec3(0.0, -1.0, 0.0), lightDir, directColor, ambientColor) * mix(1.0, 0.85, rainStrength)
+            + cloudFlash(vec3(p.x, 0.0, p.y));
+    float a = cover * 0.9 * (1.0 - smoothstep(RANGE * 0.45, RANGE, t)) * exp(-rainStrength * 0.0015 * t);
+    return vec4(col * a, 1.0 - a);
 #else
     return vec4(0.0, 0.0, 0.0, 1.0);
 #endif

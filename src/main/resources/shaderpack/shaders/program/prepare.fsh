@@ -2,6 +2,9 @@
 
 #include "/lib/common.glsl"
 #include "/lib/atmosphere.glsl"
+#if CLOUDS > 0
+#include "/lib/clouds.glsl"
+#endif
 
 /*
 const int colortex7Format = RGBA16F;
@@ -64,6 +67,23 @@ void main() {
         outSky = vec4(skyRadiance(dir, sunDir, SKY_STEPS), 1.0);
         return;
     }
+
+#if CLOUDS > 0
+    ivec2 mapPixel = pixel - CLOUD_MAP_ORIGIN;
+    if (all(greaterThanEqual(mapPixel, ivec2(0))) && all(lessThan(mapPixel, ivec2(CLOUD_MAP_SIZE)))) {
+        CloudLayer deck = mainCloudLayer();
+        vec2 cell = cloudMapCell(mapPixel, cloudMapCentre(deck.offset, deck.cell));
+        vec4 v;
+        v.r = cloudCellAt(cell, deck.coverage, deck.seed) ? 1.0 : 0.0;
+        v.g = cloudMottle(cell, deck.seed);
+        CloudLayer scud = scudCloudLayer();
+        vec2 scudCell = cloudMapCell(mapPixel, cloudMapCentre(scud.offset, scud.cell));
+        v.b = scud.coverage > 0.0 && cloudCellAt(scudCell, scud.coverage, scud.seed) ? 1.0 : 0.0;
+        v.a = cloudMottle(scudCell, scud.seed);
+        outSky = v;
+        return;
+    }
+#endif
 
     discard;
 }

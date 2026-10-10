@@ -200,8 +200,8 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         reflectWorld.y = abs(reflectWorld.y);
         vec3 skyRefl = sampleSkyLut(reflectWorld, sunDirection());
 #if CLOUDS > 0 && QUALITY > 0
-        vec4 clouds = cloudLayersFrom(surfacePlayer + cameraPosition, reflectWorld, 1e6, lightDirection(), directLightColor(),
-                ambientLightColor(), CLOUD_STEPS);
+        vec4 clouds = cloudReflection(surfacePlayer + cameraPosition, reflectWorld, lightDirection(), directLightColor(),
+                ambientLightColor());
         skyRefl = skyRefl * clouds.a + clouds.rgb;
 #endif
         // An overcast night sky still glows a little in reflections.
@@ -257,7 +257,7 @@ vec3 lightShafts(vec2 uv, float noise) {
     if (facing < 0.002) {
         return vec3(0.0);
     }
-    const int STEPS = 16;
+    const int STEPS = LIGHT_SHAFT_STEPS;
     vec2 delta = (lightUv - uv) / float(STEPS);
     vec2 p = uv + delta * noise;
     float lit = 0.0;
