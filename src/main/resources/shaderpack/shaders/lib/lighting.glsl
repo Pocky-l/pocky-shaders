@@ -58,21 +58,22 @@ float roughDiffuse(float nl, float nv, float lh, float roughness) {
 }
 
 // Roughness of the sun's reflection on a material (no reflection on plants: their quads have no real surface normal).
+// Dirt, stone, wood and wool are very rough: anything glossier made the world look like plastic toy cubes.
 float sheenRoughness(int material) {
     if (material == MAT_LEAVES) {
-        return 0.5;
+        return 0.75;
     }
     if (material == MAT_ENTITY || material == MAT_HAND) {
-        return 0.55;
+        return 0.8;
     }
-    return 0.62;
+    return 0.9;
 }
 
-// The sun mirrored by the surface itself. Every block is a little glossy (a dielectric, F0 0.04): a faint broad
-// highlight from above, a real glare on ground and walls when looking towards a low sun.
+// The sun mirrored by the surface itself. Rough matte surfaces show no highlight from above, only a soft glare at
+// grazing angles when looking towards a low sun (the Fresnel rise; F0 0.02 keeps the rest invisible).
 float sunSheen(vec3 n, vec3 v, vec3 l, float roughness) {
     vec3 h = normalize(v + l);
-    return ggxSpecular(n, v, l, roughness) * fresnelSchlick(dot(v, h), 0.04);
+    return ggxSpecular(n, v, l, roughness) * fresnelSchlick(dot(v, h), 0.02);
 }
 
 // Light reaching the surface from the light held in hand.

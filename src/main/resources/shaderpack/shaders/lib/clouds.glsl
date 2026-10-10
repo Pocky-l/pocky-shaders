@@ -1,5 +1,6 @@
 // Clouds close to vanilla Fancy clouds: the game's own cloud texture (a resource pack that changes it changes these
-// too), one texel = a 12 x 12 block cell, 4 blocks thick at the vanilla cloud height, drifting the vanilla way. What
+// too), one texel = a 12 x 12 block cell, 4 blocks thick at the vanilla cloud height (both x CLOUD_SIZE: bigger,
+// more solid-looking cubes in the same shapes), drifting the vanilla way. What
 // the pack adds is light: the faces are lit by the sun and the sky (bright tops, softer sides, darker bases, sides
 // glowing towards a low sun), distance blends them into the sky, and they shade the ground. Rain keeps the same
 // shapes: some more cells join in and the clouds turn grey, as vanilla's do. A player can fly through them.
@@ -8,11 +9,16 @@ uniform sampler2D cloudtex;
 
 // Vanilla: cloud height 192, the geometry sits 0.33 above it.
 const float CLOUD_BOTTOM = 192.33;
-const float CLOUD_THICKNESS = 4.0;
-const float CLOUD_CELL = 12.0;
-const float CLOUD_RANGE = 2048.0;
+const float CLOUD_THICKNESS = 4.0 * CLOUD_SIZE;
+const float CLOUD_CELL = 12.0 * CLOUD_SIZE;
+// Bigger clouds stay visible farther out.
+const float CLOUD_RANGE = 1536.0 + 512.0 * CLOUD_SIZE;
+// Opacity per block: about vanilla's 0.8 through the 4 blocks of a vanilla-sized cloud, thicker clouds a little more
+// solid, while thin slices at the edges stay see-through.
+const float CLOUD_DENSITY = 0.4 / sqrt(CLOUD_SIZE);
 // Vanilla clouds drift 0.6 blocks per second. frameTimeCounter wraps every hour, so the speed is chosen to move the
-// pattern by exactly one texture repeat (256 cells) per hour: the wrap never shows.
+// pattern by exactly one texture repeat (256 cells) per hour: the wrap never shows. Bigger cells drift faster in
+// blocks, at the same pace in cells.
 const float CLOUD_SPEED = 256.0 * CLOUD_CELL / 3600.0;
 // Where the extra rain and thunder cells are read from: other parts of the same texture, so they keep its shapes.
 const vec2 CLOUD_RAIN_SHIFT = vec2(97.0, 53.0);
@@ -189,9 +195,9 @@ vec4 cloudSlab(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 directC
             density = mix(density, cloudCover(mid.xz, 0.0), lod);
         }
         if (density > 0.0) {
-            // About vanilla's 0.8 opacity through the 4 blocks of a cloud (denser rain clouds); a thin slice at an
-            // edge is see-through.
-            float a = (1.0 - exp(-(tNext - t) * (0.4 + 0.2 * rainStrength))) * density * cloudRangeFade(t);
+            // Rain clouds are denser.
+            float a = (1.0 - exp(-(tNext - t) * CLOUD_DENSITY * (1.0 + 0.5 * rainStrength))) * density
+                    * cloudRangeFade(t);
             vec3 c = cloudFaceLight(lod > 0.0 ? mix(faceNormal, slabFace, lod) : faceNormal, lightDir, directColor,
                     ambientColor);
             c += cloudFlash(mid);

@@ -47,6 +47,8 @@ option.WATER_FOAM.comment=Рваная пена на воде глубиной �
 option.CLOUDS=Облака
 option.CLOUDS.comment=Нет, плоские как ванильные быстрые, или объёмные блочные, сквозь которые можно пролететь. Форма берётся из текстуры облаков игры.
 option.CLOUD_COVERAGE=Облачность
+option.CLOUD_SIZE=Размер облаков
+option.CLOUD_SIZE.comment=Размер кубов облаков относительно ванили (1 = ванильные 12 x 12 x 4 блока); формы те же, объёма больше.
 option.LIGHT_SHAFTS=Лучи света
 option.LIGHT_SHAFTS.comment=Лучи света сквозь просветы, если смотреть на солнце.
 option.LIGHT_SHAFT_STRENGTH=Сила лучей
