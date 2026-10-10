@@ -27,7 +27,10 @@ void main() {
     if (renderStage != MC_RENDER_STAGE_STARS) {
         discard;
     }
-    outColor = vec4(srgbToLinear(vertexColor.rgb) * 1.5, vertexColor.a);
+    // Vanilla starts the stars while the twilight sky is still bright orange; they come out once it has darkened
+    // (sun 6 to 17 degrees below the horizon).
+    float starNight = smoothstep(-0.1, -0.3, sunElevation());
+    outColor = vec4(srgbToLinear(vertexColor.rgb) * 1.5, vertexColor.a * starNight);
     #else
     outColor = vec4(srgbToLinear(vertexColor.rgb), vertexColor.a);
     #endif
@@ -37,7 +40,10 @@ void main() {
     // The vanilla (square) sun, as bright and as coloured as the sunlight through the air; the moon as it is.
     if (renderStage == MC_RENDER_STAGE_SUN) {
         // From the texture only its brightness: its yellow edge pixels turned into a saturated yellow frame.
-        color.rgb = vec3(luminance(srgbToLinear(color.rgb))) * sunDiscColor() * 1.2;
+        // Capped, so a low sun keeps its warm hue in the tonemap instead of clipping to a plain white square.
+        vec3 disc = sunDiscColor() * 1.2;
+        float peak = max(disc.r, max(disc.g, disc.b));
+        color.rgb = vec3(luminance(srgbToLinear(color.rgb))) * disc * (min(peak, 4.0) / max(peak, 1e-4));
     } else {
         color.rgb = srgbToLinear(color.rgb) * (renderStage == MC_RENDER_STAGE_MOON ? 1.6 : 1.0);
     }

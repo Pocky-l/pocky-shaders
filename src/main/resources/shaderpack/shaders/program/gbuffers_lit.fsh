@@ -54,10 +54,21 @@ void main() {
 
     Surface s;
     s.albedo = srgbToLinear(color.rgb);
+#if defined PROG_TERRAIN
+    s.albedo = tameBrightAlbedo(s.albedo, srgbToLinear(textureLod(gtexture, texcoord, 4.0).rgb * vertexColor.rgb),
+            frameLights().direct);
+#endif
     s.playerPos = playerPos;
     s.normal = n;
     s.lightmap = lightmap;
-    s.ao = ao * ao;
+    // Vanilla's corner occlusion is strong inside a canopy of full leaf blocks; squared, it turned tree crowns into
+    // dark, flat masses.
+    s.ao = material == MAT_LEAVES ? mix(1.0, ao, 0.6) : ao * ao;
+#if defined PROG_TEXTURED
+    // Some particles (modded ones especially) come without a usable sky light and turned black in the open: they are
+    // never darker than the sky light around the player.
+    s.lightmap.y = max(s.lightmap.y, float(eyeBrightnessSmooth.y) / 240.0);
+#endif
     s.material = material;
 
     vec3 lit = shade(s, frameLights(), dither(gl_FragCoord.xy));

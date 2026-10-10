@@ -134,9 +134,10 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     // Refraction: look up the scene below with an offset from the waves, unless that lands in front of the water.
     vec2 refractUv = uv;
 #ifdef WATER_REFRACTION
-    if (isEyeInWater == 0) {
+    if (isEyeInWater <= 1) {
         float behind = length(viewPosition(uv, true) - surfaceView);
-        vec3 flatNormal = mat3(gbufferModelView) * vec3(0.0, 1.0, 0.0);
+        // Seen from below the surface faces down.
+        vec3 flatNormal = mat3(gbufferModelView) * vec3(0.0, worldNormal.y >= 0.0 ? 1.0 : -1.0, 0.0);
         vec2 offset = (viewNormal.xy - flatNormal.xy) * 0.06 * saturate(behind * 0.25);
         vec2 candidate = uv + offset / max(1.0, -surfaceView.z * 0.08);
         if (texture(depthtex1, candidate).r > texture(depthtex0, uv).r) {
@@ -177,8 +178,26 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 
     vec3 result;
     if (isEyeInWater == 1) {
-        // Seen from below: the world above, dimmed by the surface.
-        result = below * 0.9;
+        // Seen from below. Within Snell's window (about 49 degrees around straight up) the world above shows through,
+        // bent by the waves; further out the surface mirrors the water below it (total internal reflection), so the
+        // sky does not show through it like through a pane of glass.
+        vec3 down = worldNormal.y <= 0.0 ? worldNormal : -worldNormal;
+        float cosI = saturate(dot(-normalize(surfacePlayer), down));
+        float sinT2 = 1.777 * (1.0 - cosI * cosI);
+        float through = 0.0;
+        if (sinT2 < 1.0) {
+            float cosT = sqrt(1.0 - sinT2);
+            float rs = (1.333 * cosI - cosT) / (1.333 * cosI + cosT);
+            float rp = (1.333 * cosT - cosI) / (1.333 * cosT + cosI);
+            through = 1.0 - 0.5 * (rs * rs + rp * rp);
+        }
+#ifdef DIM_OVERWORLD
+        vec3 light = (ambientLightColor() * 0.6 + directLightColor() * 0.15) / PI * sky;
+#else
+        vec3 light = vec3(0.04);
+#endif
+        vec3 mirrored = light * vec3(0.05, 0.22, 0.26) * 1.4 + vec3(0.002, 0.006, 0.008);
+        result = mix(mirrored, below * 0.9, through);
     } else {
         // Absorption (reds go first) and in-scattered light colour the water with depth.
         vec3 absorb = (vec3(0.40, 0.11, 0.08) + (1.0 - tint) * 0.12) / WATER_CLARITY;
@@ -250,19 +269,20 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     }
 
 #ifdef WATER_FOAM
-    // Broken foam where the water is barely a block deep (puddle films stay clear), whitecaps on open water in a storm.
+    // A thin line of broken foam where the water runs out on a shore (a few tenths of a block deep; puddle films and
+    // ordinary one-block-deep streams stay clear), whitecaps on deep open water in a storm.
     if (isEyeInWater == 0 && worldNormal.y > 0.5 && !puddle) {
-        float amount = smoothstep(0.12, 0.3, depthBelow) * (1.0 - smoothstep(0.6, 1.4, depthBelow))
-                * (1.0 - smoothstep(48.0, 96.0, surfaceDist));
-        float whitecaps = depthBelow > 2.0 ? waterWhitecaps((surfacePlayer + cameraPosition).xz) * 0.55
-                * (1.0 - smoothstep(160.0, 320.0, surfaceDist)) : 0.0;
+        float amount = smoothstep(0.12, 0.25, depthBelow) * (1.0 - smoothstep(0.35, 0.6, depthBelow))
+                * (1.0 - smoothstep(32.0, 64.0, surfaceDist));
+        float whitecaps = waterWhitecaps((surfacePlayer + cameraPosition).xz) * 0.45 * smoothstep(2.0, 6.0, depthBelow)
+                * (1.0 - smoothstep(96.0, 240.0, surfaceDist));
         if (amount > 0.0 || whitecaps > 0.0) {
 #ifdef DIM_OVERWORLD
             vec3 foamLight = (ambientLightColor() + directLightColor() * saturate(lightDirection().y)) / PI * sky;
 #else
             vec3 foamLight = vec3(0.05);
 #endif
-            float foam = max(waterFoam((surfacePlayer + cameraPosition).xz) * amount * 0.35, whitecaps);
+            float foam = max(waterFoam((surfacePlayer + cameraPosition).xz) * amount * 0.25, whitecaps);
             result = mix(result, foamLight * 0.8, foam);
         }
     }
@@ -322,7 +342,8 @@ void main() {
 
     vec4 translucent = texture(colortex3, texcoord);
     color = color * (1.0 - translucent.a) + translucent.rgb;
-    color = mix(withClouds, color, cloudTransmittance);
+    // Seen from under water, the clouds are part of the world above the surface: they go through it like the sky.
+    color = mix(withClouds, color, isEyeInWater == 1 ? 1.0 : cloudTransmittance);
 
     vec3 playerPos = mat3(gbufferModelViewInverse) * surfaceView;
     float dist = length(playerPos);

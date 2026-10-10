@@ -95,11 +95,16 @@ float waterFoam(vec2 worldXZ) {
     return smoothstep(0.52, 0.72, n);
 }
 
-// Whitecaps: foam breaking on the crests of storm waves (0..1).
+// Whitecaps: foam breaking on the highest crests of storm waves (0..1). Soft streaks a few blocks long that drift with
+// the swell - sharp one-block flecks all over the sea read as noise, not foam.
 float waterWhitecaps(vec2 worldXZ) {
     if (thunderStrength <= 0.0) {
         return 0.0;
     }
-    float crest = smoothstep(0.62, 0.8, waterHeight(worldXZ, 0.0) / (0.85 + 1.6 * thunderStrength) * 1.5);
-    return crest * smoothstep(0.45, 0.7, waterFoam(worldXZ * 0.6)) * thunderStrength;
+    float crest = smoothstep(0.7, 0.95, waterHeight(worldXZ, 0.0) / (0.85 + 1.6 * thunderStrength) * 1.5);
+    float t = frameTimeCounter * 0.25;
+    // Two drifting noises break the crest into small patches.
+    float patches = smoothstep(0.5, 0.8, valueNoise(worldXZ * 0.45 + vec2(t, -t * 0.6)))
+            * smoothstep(0.35, 0.75, valueNoise(mat2(0.8, -0.6, 0.6, 0.8) * worldXZ * 1.3 - vec2(t * 1.3, t)));
+    return crest * patches * thunderStrength * thunderStrength;
 }

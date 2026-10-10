@@ -76,6 +76,23 @@ float sunSheen(vec3 n, vec3 v, vec3 l, float roughness) {
     return ggxSpecular(n, v, l, roughness) * fresnelSchlick(dot(v, h), 0.02);
 }
 
+// Near-white materials (snow - vanilla's and modded snow covers alike -, ice, white wool, quartz, calcite) lit by the
+// full sun ran into the top of the tonemap as flat white sheets. Judged by the block's average colour (a coarse mip
+// of its texture, x the vertex tint), they are darkened as a whole and their texture's contrast is raised, so they
+// keep grain and shape. Only under a strong sun: in overcast light or a blizzard snow stays bright white. Darker
+// materials are untouched.
+vec3 tameBrightAlbedo(vec3 albedo, vec3 average, vec3 directLight) {
+    float averageLum = luminance(average);
+    float bright = smoothstep(0.45, 0.75, averageLum) * smoothstep(1.0, 5.0, luminance(directLight));
+    if (bright <= 0.0) {
+        return albedo;
+    }
+    // Under the full sun a surface at albedo ~0.4 already sits high on the tonemap curve (where it still has slope).
+    float scale = (0.38 + (averageLum - 0.5) * 0.1) / averageLum;
+    vec3 detail = pow(max(albedo, 1e-4) / max(average, vec3(1e-4)), vec3(2.2));
+    return mix(albedo, average * scale * detail, bright);
+}
+
 // Light reaching the surface from the light held in hand.
 float handLight(vec3 playerPos) {
 #ifdef HANDHELD_LIGHT
@@ -178,7 +195,8 @@ vec3 shade(Surface s, Lights lights, float noise) {
 
 #if defined WET_SURFACES && defined DIM_OVERWORLD
     // Rain darkens exposed surfaces and gives them a soft sky sheen.
-    float wet = wetness * smoothstep(0.75, 0.95, sky) * saturate(s.normal.y * 0.7 + 0.3);
+    // Falling snow leaves nothing wet.
+    float wet = wetness * (1.0 - snowWeather) * smoothstep(0.75, 0.95, sky) * saturate(s.normal.y * 0.7 + 0.3);
     if (wet > 0.01 && s.material != MAT_ENTITY && s.material != MAT_HAND) {
         // Water fills the pores: darker, and colours deepen instead of washing out.
         float lum = luminance(color);

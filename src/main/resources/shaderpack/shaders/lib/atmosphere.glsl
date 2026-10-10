@@ -224,7 +224,9 @@ vec4 twilightGlow(vec3 dir, vec3 sunDir) {
     float shadow = below * exp(-e / 0.06) * away * away * 0.45;
 
     vec3 blueHour = vec3(0.1, 0.3, 1.0) * 0.014 * smoothstep(0.0, 0.6, e);
-    return vec4((arch * 0.3 + beltColor * belt * 0.12 + blueHour) * amount, shadow * amount);
+    // Kept moderate: stronger, the pink and orange washed over the land, the sea and every cloud (fog, reflections and
+    // the ambient light all take the sky colour).
+    return vec4((arch * 0.22 + beltColor * belt * 0.07 + blueHour) * amount, shadow * amount);
 }
 
 // Full sky radiance (sun + moon scattering + faint airglow), in world space directions; rain blends in the overcast
@@ -235,8 +237,14 @@ vec3 skyRadiance(vec3 dir, vec3 sunDir, int steps) {
     vec3 airglow = vec3(0.0016, 0.0022, 0.0038) * (1.0 + 2.0 * saturate(dir.y));
     vec4 twilight = twilightGlow(dir, sunDir);
     sky *= SKY_RADIANCE_SCALE * (1.0 - twilight.w);
+    float twilightNow = twilightAmount(sunDir.y);
+    // Near the horizon the light has crossed so much air that it was scattered many times over and comes out pale,
+    // close to white. Single scattering alone reddens it there: a thin brownish band along the horizon by day and
+    // night. Sunset keeps its own colours.
+    float horizon = exp(-max(dir.y, 0.0) / 0.04) * (1.0 - twilightNow);
+    sky = mix(sky, vec3(luminance(sky)) * vec3(0.97, 1.0, 1.04), horizon * 0.75);
     // The low sun's light reaches the sky through the dusty lower air: richer colour than the clean model gives.
-    sky = max(mix(vec3(luminance(sky)), sky, 1.0 + 0.35 * twilightAmount(sunDir.y)), 0.0);
+    sky = max(mix(vec3(luminance(sky)), sky, 1.0 + 0.2 * twilightNow), 0.0);
     sky += airglow + twilight.rgb;
     if (rainStrength > 0.0) {
         // Below the horizon (reflections, fog looking down) the deck's light is what the ground bounces back.

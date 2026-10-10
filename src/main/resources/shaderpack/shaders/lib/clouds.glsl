@@ -112,8 +112,10 @@ vec3 cloudFaceLight(vec3 n, vec3 lightDir, vec3 directColor, vec3 ambientColor) 
     if (twilight > 0.0) {
         // Saturated, so the glow stays orange and pink instead of washing out to cream; rose at sunrise.
         vec3 hue = lowSunHue(sunDir.y + 0.03);
-        hue = mix(hue * hue, vec3(1.0, 0.5, 0.62), 0.45 * morning());
-        vec3 glow = hue * SUN_ILLUMINANCE * 0.11 * twilight;
+        hue = mix(hue * hue, vec3(1.0, 0.62, 0.68), 0.35 * morning());
+        // A third of the saturation taken out: the full colour painted every cloud flat bubblegum pink.
+        hue = mix(vec3(luminance(hue)), hue, 0.65);
+        vec3 glow = hue * SUN_ILLUMINANCE * 0.08 * twilight;
         clear += glow * (0.35 + 0.65 * saturate(dot(n, sunDir))) / PI * face;
     }
     // Under rain only the grey sky lights them, and they must stay darker than it from below - lighter clouds on a
