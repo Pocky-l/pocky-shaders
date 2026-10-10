@@ -180,6 +180,8 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         vec3 shallowScatter = mix(vec3(0.05, 0.22, 0.26), tint * vec3(0.3, 0.5, 0.55), 0.5);
         vec3 deepScatter = mix(vec3(0.02, 0.10, 0.22), tint * vec3(0.15, 0.3, 0.5), 0.5);
         vec3 scatterColor = light * mix(shallowScatter, deepScatter, smoothstep(3.0, 18.0, waterDist));
+        // Churned storm water turns slate grey-green.
+        scatterColor = mix(scatterColor, vec3(luminance(scatterColor)) * vec3(0.8, 1.0, 1.0), 0.5 * thunderStrength);
         result = below * transmit + scatterColor * (1.0 - exp(-waterDist * 0.4 / WATER_CLARITY));
         result *= mix(0.7, 1.0, smoothstep(0.1, 0.8, waterDist));
     }
@@ -224,17 +226,19 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #endif
 
 #ifdef WATER_FOAM
-    // Broken foam where the water is barely a block deep (puddle films stay clear).
+    // Broken foam where the water is barely a block deep (puddle films stay clear), whitecaps on open water in a storm.
     if (isEyeInWater == 0 && worldNormal.y > 0.5) {
         float amount = smoothstep(0.12, 0.3, depthBelow) * (1.0 - smoothstep(0.6, 1.4, depthBelow))
                 * (1.0 - smoothstep(48.0, 96.0, surfaceDist));
-        if (amount > 0.0) {
+        float whitecaps = depthBelow > 2.0 ? waterWhitecaps((surfacePlayer + cameraPosition).xz) * 0.55
+                * (1.0 - smoothstep(160.0, 320.0, surfaceDist)) : 0.0;
+        if (amount > 0.0 || whitecaps > 0.0) {
 #ifdef DIM_OVERWORLD
             vec3 foamLight = (ambientLightColor() + directLightColor() * saturate(lightDirection().y)) / PI * sky;
 #else
             vec3 foamLight = vec3(0.05);
 #endif
-            float foam = waterFoam((surfacePlayer + cameraPosition).xz) * amount * 0.35;
+            float foam = max(waterFoam((surfacePlayer + cameraPosition).xz) * amount * 0.35, whitecaps);
             result = mix(result, foamLight * 0.8, foam);
         }
     }

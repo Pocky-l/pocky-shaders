@@ -2,9 +2,22 @@
 // Needs common, atmosphere and sky.
 
 // Optical depth of the air over a distance: clear haze, plus rain that starts a little away from the player (the
-// air right around you stays clear, the curtain builds up beyond it).
-float fogOpticalDepth(float dist) {
-    return FOG_DENSITY * (0.00035 * dist + rainStrength * 0.0045 * max(dist - 16.0, 0.0));
+// air right around you stays clear, the curtain builds up beyond it). rainSheets scales the rain part.
+float fogOpticalDepth(float dist, float rainSheets) {
+    return FOG_DENSITY * (0.00035 * dist + rainStrength * 0.0045 * rainSheets * max(dist - 16.0, 0.0));
+}
+
+// Heavier and lighter sheets of rain sweeping across the land with the wind: rain density along a view ray, read
+// where the ray is 30..140 blocks out (so the sheets stand in the world rather than sticking to the screen).
+float rainSheets(vec3 dir, float dist) {
+    if (rainStrength <= 0.0) {
+        return 1.0;
+    }
+    vec2 p = cameraPosition.xz + dir.xz * clamp(dist, 30.0, 140.0);
+    vec2 drift = frameTimeCounter * vec2(3.5, 1.2);
+    float n = valueNoise((p - drift) / 90.0) * 0.65 + valueNoise((p - drift * 1.4) / 35.0 + 9.0) * 0.35;
+    float strength = 0.6 + 0.6 * thunderStrength;
+    return mix(1.0, 0.45 + 1.3 * n, strength);
 }
 
 // Fog for a surface at playerPos (relative to the camera). Returns the scene colour with fog applied.
@@ -27,7 +40,7 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     float falloff = 0.012;
     float dy = playerPos.y * falloff;
     float heightTerm = exp(-max(y0, -40.0) * falloff) * (abs(dy) > 1e-3 ? (1.0 - exp(-dy)) / dy : 1.0);
-    float amount = 1.0 - exp(-fogOpticalDepth(dist) * clamp(heightTerm, 0.02, 4.0));
+    float amount = 1.0 - exp(-fogOpticalDepth(dist, rainSheets(dir, dist)) * clamp(heightTerm, 0.02, 4.0));
 
     // Low haze: moist air settling over water and in low land. Its density falls off quickly above sea level, so it
     // fills the sea and the valleys between hills while peaks rise out of it, and it builds up with distance (the

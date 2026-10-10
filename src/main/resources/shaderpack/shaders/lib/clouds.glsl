@@ -1,7 +1,7 @@
 // Near-vanilla clouds: blocky cells of 12 x 12 blocks, 4 blocks thick, at the vanilla cloud height, drifting the
 // vanilla way - but lit by the sun and sky (bright tops, shaded bottoms, sunlit sides), with translucent thin edges
-// and haze in the distance. Rain closes them into a thicker deck, a thunderstorm into a dark solid one. The same
-// cells cast the shadows on the ground. A player can fly through them.
+// and haze in the distance. Rain closes them into a thicker, mottled deck; a thunderstorm adds a low layer of small,
+// dark, fast-running scud cells under it. The main cells cast the shadows on the ground. A player can fly through.
 
 const float CLOUD_BOTTOM = 192.0;
 
@@ -21,10 +21,36 @@ vec2 cloudOffset() {
 }
 
 // Clouds form clumps of cells, like the vanilla cloud texture.
+bool cloudCellAt(vec2 cell, float coverage, float seed) {
+    vec2 p = cell * 0.11 + seed;
+    float n = valueNoise(p) * 0.6 + valueNoise(p * 2.3 + 17.0) * 0.3 + hash12(cell + seed) * 0.1;
+    return n > 1.0 - coverage;
+}
+
 bool cloudCell(vec2 cell) {
-    vec2 p = cell * 0.11;
-    float n = valueNoise(p) * 0.6 + valueNoise(p * 2.3 + 17.0) * 0.3 + hash12(cell) * 0.1;
-    return n > 1.0 - cloudCoverage();
+    return cloudCellAt(cell, cloudCoverage(), 0.0);
+}
+
+// One slab of blocky clouds.
+struct CloudLayer {
+    float bottom;
+    float top;
+    float cell;
+    vec2 offset;
+    float coverage;
+    float seed;
+    float brightness;
+};
+
+CloudLayer mainCloudLayer() {
+    return CloudLayer(CLOUD_BOTTOM, cloudTop(), CLOUD_CELL, cloudOffset(), cloudCoverage(), 0.0, 1.0);
+}
+
+// Storm scud: ragged low cells racing under the deck (constant speed, so a change of weather never makes them jump;
+// they appear through their coverage).
+CloudLayer scudCloudLayer() {
+    float coverage = saturate(thunderStrength * 0.62 + rainStrength * 0.2 - 0.15);
+    return CloudLayer(150.0, 153.0, 8.0, frameTimeCounter * vec2(2.4, 0.7), coverage, 31.7, 0.72);
 }
 
 // Soft occupancy at a world position (bilinear between cells), used for flat clouds.
@@ -90,20 +116,21 @@ vec3 cloudFlash(vec3 worldPos) {
     return FLASH_TINT * flash * (0.4 + 3.0 * exp(-d / 180.0));
 }
 
-// Clouds along a world-space ray from the camera up to maxDist. rgb: cloud light, a: transmittance behind.
-vec4 cloudLayersFrom(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, vec3 ambientColor, int steps) {
-#if CLOUDS > 0
+#if CLOUDS == 2
+// Clouds of one layer along a world-space ray up to maxDist. rgb: cloud light, a: transmittance behind.
+vec4 cloudSlab(CloudLayer layer, vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 directColor,
+        vec3 ambientColor, int maxCells) {
     float t0;
     float t1;
     if (abs(dir.y) < 1e-5) {
-        if (origin.y < CLOUD_BOTTOM || origin.y > cloudTop()) {
+        if (origin.y < layer.bottom || origin.y > layer.top) {
             return vec4(0.0, 0.0, 0.0, 1.0);
         }
         t0 = 0.0;
         t1 = 1e6;
     } else {
-        float tb = (CLOUD_BOTTOM - origin.y) / dir.y;
-        float tt = (cloudTop() - origin.y) / dir.y;
+        float tb = (layer.bottom - origin.y) / dir.y;
+        float tt = (layer.top - origin.y) / dir.y;
         t0 = max(min(tb, tt), 0.0);
         t1 = max(tb, tt);
     }
@@ -113,58 +140,54 @@ vec4 cloudLayersFrom(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 d
         return vec4(0.0, 0.0, 0.0, 1.0);
     }
 
-#if CLOUDS == 1
-    // Flat: one plane at the cloud base, like vanilla "Fast" clouds.
-    vec2 p = origin.xz + dir.xz * t0;
-    float cover = cloudCover(p);
-    vec3 col = cloudFaceLight(vec3(0.0, -sign(dir.y), 0.0), lightDir, directColor, ambientColor) + cloudFlash(vec3(p.x, 0.0, p.y));
-    float a = cover * 0.85 * (1.0 - smoothstep(RANGE * 0.5, RANGE, t0));
-    return vec4(col * a, 1.0 - a);
-#else
     // Walk the cells along the ray (2D DDA over the xz grid, inside the slab).
-    vec2 offset = cloudOffset();
     vec3 pos = origin + dir * t0;
-    vec2 g = (pos.xz + offset) / CLOUD_CELL;
+    vec2 g = (pos.xz + layer.offset) / layer.cell;
     vec2 cell = floor(g);
     vec2 stepDir = vec2(dir.x >= 0.0 ? 1.0 : -1.0, dir.z >= 0.0 ? 1.0 : -1.0);
     vec2 invDir = 1.0 / max(abs(dir.xz), vec2(1e-6));
     vec2 nextBoundary = vec2(
             stepDir.x > 0.0 ? (cell.x + 1.0) - g.x : g.x - cell.x,
-            stepDir.y > 0.0 ? (cell.y + 1.0) - g.y : g.y - cell.y) * CLOUD_CELL * invDir;
-    vec2 cellStep = CLOUD_CELL * invDir;
+            stepDir.y > 0.0 ? (cell.y + 1.0) - g.y : g.y - cell.y) * layer.cell * invDir;
+    vec2 cellStep = layer.cell * invDir;
+    vec3 slabFace = vec3(0.0, -sign(dir.y), 0.0);
 
     // Face the ray enters through: the slab plane, unless the camera is already inside.
-    vec3 entryNormal = (t0 > 0.0) ? vec3(0.0, -sign(dir.y), 0.0) : -dir;
+    vec3 entryNormal = (t0 > 0.0) ? slabFace : -dir;
     float t = t0;
     vec3 light = vec3(0.0);
     float transmittance = 1.0;
     vec3 faceNormal = entryNormal;
     bool inside = false;
-    int maxCells = steps * 5;
     for (int i = 0; i < maxCells; i++) {
         float tNext = min(t0 + min(nextBoundary.x, nextBoundary.y), t1);
-        bool occupied = cloudCell(cell);
+        bool occupied = cloudCellAt(cell, layer.coverage, layer.seed);
         if (occupied && !inside) {
             faceNormal = entryNormal;
         }
         inside = occupied;
-        // Far away a cell gets smaller than a pixel and the hard cell pattern turns into rings (moire): blend it
-        // into the smooth cell density and the plain slab-face shading.
+        // Far away a cell gets smaller than a pixel and the hard cell pattern turns into rings (moire): blend the
+        // main deck into its smooth cell density and the plain slab-face shading.
         float lod = smoothstep(300.0, 900.0, t);
         float density = occupied ? 1.0 : 0.0;
         vec3 mid = origin + dir * (0.5 * (t + tNext));
-        if (lod > 0.0) {
+        if (lod > 0.0 && layer.seed == 0.0) {
             density = mix(density, cloudShadowCover(mid.xz), lod);
         }
         if (density > 0.0) {
             float len = tNext - t;
-            // Thin slices (grazing edges) are see-through, a full cell is nearly opaque.
-            float a = (1.0 - exp(-len * 0.3)) * density;
+            // Thin slices (grazing edges) are see-through, a full cell is nearly opaque. Rain hides distant clouds
+            // in the falling water, so the deck melts into the sky towards the horizon.
+            float a = (1.0 - exp(-len * 0.3)) * density * exp(-rainStrength * 0.0015 * t);
             float haze = smoothstep(RANGE * 0.45, RANGE, t);
             vec3 c = cloudFaceLight(faceNormal, lightDir, directColor, ambientColor);
             if (lod > 0.0) {
-                c = mix(c, cloudFaceLight(vec3(0.0, -sign(dir.y), 0.0), lightDir, directColor, ambientColor), lod);
+                c = mix(c, cloudFaceLight(slabFace, lightDir, directColor, ambientColor), lod);
             }
+            // Rain clouds are mottled: thicker, darker cells next to thinner, lighter ones give the deck a shape.
+            vec2 shadeCell = floor((mid.xz + layer.offset) / layer.cell);
+            float mottle = valueNoise(shadeCell * 0.09 + layer.seed + 40.0) * 0.7 + hash12(shadeCell + 3.0) * 0.3;
+            c *= layer.brightness * mix(1.0, 0.55 + 0.8 * mottle, rainStrength);
             c += cloudFlash(mid);
             light += c * a * transmittance * (1.0 - haze);
             transmittance *= 1.0 - a * (1.0 - haze);
@@ -188,7 +211,38 @@ vec4 cloudLayersFrom(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 d
         t = tNext;
     }
     return vec4(light, transmittance);
+}
 #endif
+
+// Clouds along a world-space ray from origin up to maxDist. rgb: cloud light, a: transmittance behind.
+vec4 cloudLayersFrom(vec3 origin, vec3 dir, float maxDist, vec3 lightDir, vec3 directColor, vec3 ambientColor, int steps) {
+#if CLOUDS == 1
+    // Flat: one plane at the cloud base, like vanilla "Fast" clouds.
+    const float RANGE = 2400.0;
+    if (abs(dir.y) < 1e-5) {
+        return vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    float t0 = (CLOUD_BOTTOM - origin.y) / dir.y;
+    if (t0 <= 0.0 || t0 > min(maxDist, RANGE)) {
+        return vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    vec2 p = origin.xz + dir.xz * t0;
+    float cover = cloudCover(p);
+    vec3 col = cloudFaceLight(vec3(0.0, -sign(dir.y), 0.0), lightDir, directColor, ambientColor)
+            + cloudFlash(vec3(p.x, 0.0, p.y));
+    float a = cover * 0.85 * (1.0 - smoothstep(RANGE * 0.5, RANGE, t0)) * exp(-rainStrength * 0.0015 * t0);
+    return vec4(col * a, 1.0 - a);
+#elif CLOUDS == 2
+    vec4 deck = cloudSlab(mainCloudLayer(), origin, dir, maxDist, lightDir, directColor, ambientColor, steps * 5);
+    CloudLayer scud = scudCloudLayer();
+    if (scud.coverage <= 0.0) {
+        return deck;
+    }
+    vec4 low = cloudSlab(scud, origin, dir, maxDist, lightDir, directColor, ambientColor, steps * 3);
+    // The layer nearer to the eye goes in front.
+    vec4 front = origin.y < scud.top ? low : deck;
+    vec4 back = origin.y < scud.top ? deck : low;
+    return vec4(front.rgb + back.rgb * front.a, front.a * back.a);
 #else
     return vec4(0.0, 0.0, 0.0, 1.0);
 #endif

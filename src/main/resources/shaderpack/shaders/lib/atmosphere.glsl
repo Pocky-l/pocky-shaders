@@ -127,10 +127,14 @@ vec3 flashSkyRadiance() {
     return FLASH_TINT * lightningFlash() * 0.9 * rainStrength;
 }
 
-// Overcast sky: brightness relative to the zenith (a softened CIE overcast sky - the horizon is darker than the
-// zenith, never a glowing band).
+// Overcast sky: brightness relative to the zenith value. Rain: a softened CIE overcast sky (the horizon darker than
+// the zenith, never a glowing band). Thunderstorm: heavy and dark overhead, lighter towards the horizon where light
+// comes in from under the edge of the storm (scaled to light the ground the same).
 float overcastShape(float elevation) {
-    return (1.0 + 1.2 * saturate(elevation)) / 2.2;
+    float e = saturate(elevation);
+    float rain = (1.0 + 1.2 * e) / 2.2;
+    float storm = (0.62 + 0.55 * pow(1.0 - e, 3.0)) * (0.818 / 0.675);
+    return mix(rain, storm, thunderStrength);
 }
 
 // cos-weighted mean of overcastShape over the sky, x the ambient's multiple scattering factor (1.4) x pi.

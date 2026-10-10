@@ -129,10 +129,15 @@ vec3 shade(Surface s, Lights lights, float noise) {
     // Rain darkens exposed surfaces and gives them a soft sky sheen.
     float wet = wetness * smoothstep(0.75, 0.95, sky) * saturate(s.normal.y * 0.7 + 0.3);
     if (wet > 0.01 && s.material != MAT_ENTITY && s.material != MAT_HAND) {
-        color *= 1.0 - wet * 0.35;
+        // Water fills the pores: darker, and colours deepen instead of washing out.
+        float lum = luminance(color);
+        color = mix(color, max(mix(vec3(lum), color, 1.25), 0.0), wet) * (1.0 - wet * (foliage ? 0.3 : 0.42));
         vec3 r = reflect(-viewDir, s.normal);
-        float f = fresnelSchlick(dot(viewDir, s.normal), 0.03) * wet;
-        color += sampleSkyLut(r, sunDirection()) * f * 0.8;
+        r.y = abs(r.y);
+        // A film of water on top faces mirrors the sky a little, plants get only their own leaf sheen.
+        float film = foliage ? 0.5 : mix(0.8, 2.2, saturate(s.normal.y));
+        float f = fresnelSchlick(dot(viewDir, s.normal), 0.03) * wet * film;
+        color += sampleSkyLut(r, sunDirection()) * f;
         color += lights.direct * ggxSpecular(s.normal, viewDir, l, 0.25) * wet * 0.5 * (dot(direct, vec3(1.0)) > 0.0 ? 1.0 : 0.0);
     }
 #endif
