@@ -54,7 +54,7 @@ VARIANTS = [
      'LIGHT_SHAFTS': False, 'WAVING_PLANTS': False, 'WAVING_LEAVES': False, 'WET_SURFACES': False,
      'COLORED_SHADOWS': False, 'WATER_REFRACTION': False, 'VALLEY_MIST': False, 'HANDHELD_LIGHT': False,
      'FOLIAGE_TRANSLUCENCY': False, 'WATER_CAUSTICS': False, 'WATER_FOAM': False,
-     'DISTANT_SOFTENING': False, 'FAR_HAZE': '0.0'},
+     'FAR_HAZE': '0.0', 'LOW_HAZE': '0.0'},
     {'CLOUDS': '1', 'WATER_REFLECTIONS': '1', 'DISTANT_HORIZONS': True},
     {'DEBUG_VIEW': '1', 'DISTANT_HORIZONS': True},
     {'DEBUG_VIEW': '1'},
