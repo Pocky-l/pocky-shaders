@@ -68,9 +68,26 @@ vec4 unpackWater(float encoded) {
     return q / 15.0;
 }
 
+// View depth of the nearest opaque surface (vanilla chunks, then Distant Horizons), -1e6 for the sky.
+float opaqueViewZ(vec2 uv) {
+    float depth = texture(depthtex1, uv).r;
+    if (depth < 1.0) {
+        return screenToView(vec3(uv, depth)).z;
+    }
+#ifdef DISTANT_HORIZONS
+    float dh = texture(dhDepthTex1, uv).r;
+    if (dh < 1.0) {
+        return projectAndDivide(dhProjectionInverse, vec3(uv, dh) * 2.0 - 1.0).z;
+    }
+#endif
+    return -1e6;
+}
+
 #if WATER_REFLECTIONS == 2 && SSR_STEPS > 0
-// Screen-space reflection against the opaque depth; returns rgb + hit confidence.
-vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise) {
+// Screen-space reflection against the opaque depth (Distant Horizons terrain included, so far shores show up in the
+// water). Returns rgb + confidence and, through hitView, where the ray hit.
+vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise, out vec3 hitView) {
+    hitView = vec3(0.0);
     vec3 rayStep = viewDir * (0.6 + 0.04 * length(viewPos));
     vec3 pos = viewPos + rayStep * noise;
     for (int i = 0; i < SSR_STEPS; i++) {
@@ -80,21 +97,16 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise) {
         if (any(lessThan(screen.xy, vec2(0.0))) || any(greaterThan(screen.xy, vec2(1.0))) || pos.z > -near) {
             break;
         }
-        float sceneDepth = texture(depthtex1, screen.xy).r;
-        if (sceneDepth >= 1.0) {
-            continue;
-        }
-        float sceneZ = screenToView(vec3(screen.xy, sceneDepth)).z;
+        float sceneZ = opaqueViewZ(screen.xy);
         float diff = sceneZ - pos.z;
-        if (diff > 0.0 && diff < length(rayStep) * 2.5) {
+        // Thin hit test: a thick one "hit" whatever the ray passed behind and smeared trees and shores downwards.
+        if (diff > 0.0 && diff < max(length(rayStep) * 1.5, 0.3)) {
             // Refine between the last two steps.
             vec3 a = pos - rayStep;
             vec3 b = pos;
             for (int j = 0; j < 4; j++) {
                 vec3 m = (a + b) * 0.5;
-                vec3 ms = viewToScreen(m);
-                float mz = screenToView(vec3(ms.xy, texture(depthtex1, ms.xy).r)).z;
-                if (mz > m.z) {
+                if (opaqueViewZ(viewToScreen(m).xy) > m.z) {
                     b = m;
                 } else {
                     a = m;
@@ -102,7 +114,10 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise) {
             }
             vec2 uv = viewToScreen(b).xy;
             vec2 edge = smoothstep(vec2(0.0), vec2(0.08), uv) * smoothstep(vec2(1.0), vec2(0.92), uv);
-            return vec4(texture(colortex0, uv).rgb, edge.x * edge.y);
+            // Rays that ran long are the least reliable: fade them out rather than end on a hard line.
+            float reach = 1.0 - smoothstep(0.6, 1.0, float(i) / float(SSR_STEPS));
+            hitView = b;
+            return vec4(texture(colortex0, uv).rgb, edge.x * edge.y * reach);
         }
     }
     return vec4(0.0);
@@ -133,25 +148,31 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         viewNormal = mat3(gbufferModelView) * worldNormal;
     }
 
+    // The face's own normal without the waves: up or down for the surface (seen from below it faces down), the
+    // nearest horizontal axis for the side of a stream or a waterfall.
+    vec3 faceNormal = vec3(0.0, worldNormal.y >= 0.0 ? 1.0 : -1.0, 0.0);
+    if (abs(worldNormal.y) < 0.5) {
+        faceNormal = abs(worldNormal.x) > abs(worldNormal.z) ? vec3(sign(worldNormal.x), 0.0, 0.0)
+                : vec3(0.0, 0.0, sign(worldNormal.z));
+    }
+    vec3 flatNormal = mat3(gbufferModelView) * faceNormal;
+
     // Refraction: look up the scene below with an offset from the waves, unless that lands in front of the water.
     vec2 refractUv = uv;
 #ifdef WATER_REFRACTION
     if (isEyeInWater <= 1) {
         float behind = length(viewPosition(uv, true) - surfaceView);
-        // The face's own normal without the waves: up or down for the surface (seen from below it faces down), the
-        // nearest horizontal axis for the side of a stream or a waterfall.
-        vec3 faceNormal = vec3(0.0, worldNormal.y >= 0.0 ? 1.0 : -1.0, 0.0);
-        if (abs(worldNormal.y) < 0.5) {
-            faceNormal = abs(worldNormal.x) > abs(worldNormal.z) ? vec3(sign(worldNormal.x), 0.0, 0.0)
-                    : vec3(0.0, 0.0, sign(worldNormal.z));
-        }
-        vec3 flatNormal = mat3(gbufferModelView) * faceNormal;
-        vec2 offset = (viewNormal.xy - flatNormal.xy) * 0.06 * saturate(behind * 0.25);
+        vec2 offset = (viewNormal.xy - flatNormal.xy) * 0.05 * saturate(behind * 0.25);
         // Through a thin waterfall the streaks smeared the world behind into stripes.
         offset *= running ? 0.3 : 1.0;
-        vec2 candidate = uv + offset / max(1.0, -surfaceView.z * 0.08);
-        if (texture(depthtex1, candidate).r > texture(depthtex0, uv).r) {
-            refractUv = candidate;
+        offset /= max(1.0, -surfaceView.z * 0.08);
+        // Where the full offset lands on something in front of the water (a shore, a boat), try half of it before
+        // giving up: switching straight to no offset drew hard outlines around everything at the water's edge.
+        float surfaceDepth = texture(depthtex0, uv).r;
+        if (texture(depthtex1, uv + offset).r > surfaceDepth) {
+            refractUv = uv + offset;
+        } else if (texture(depthtex1, uv + offset * 0.5).r > surfaceDepth) {
+            refractUv = uv + offset * 0.5;
         }
     }
 #endif
@@ -255,7 +276,10 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 
 #if WATER_REFLECTIONS > 0
     if (isEyeInWater == 0) {
-        vec3 reflectView = reflect(viewDir, viewNormal);
+        // Reflections see the waves at half strength: the full slopes shattered the mirrored shore into a wobbling
+        // mess (the glitter below keeps the full waves).
+        vec3 reflectNormal = normalize(mix(flatNormal, viewNormal, running ? 0.35 : 0.5));
+        vec3 reflectView = reflect(viewDir, reflectNormal);
         // A thin water film on dark ground reads mostly as reflection: shallow water gets a stronger sheen.
         float shallow = 1.0 - smoothstep(0.1, 0.8, waterDist);
         float fresnel = 0.07 + 0.55 * fresnelSchlick(dot(-viewDir, viewNormal), mix(0.02, 0.05, shallow));
@@ -279,7 +303,18 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #endif
 #if WATER_REFLECTIONS == 2 && SSR_STEPS > 0
         // Fixed ray offset: a per-pixel one only sparkles without temporal filtering.
-        vec4 ssr = screenReflection(surfaceView, reflectView, 0.5);
+        vec3 hitView;
+        vec4 ssr = screenReflection(surfaceView, reflectView, 0.5, hitView);
+        if (ssr.a > 0.0) {
+            // The reflected land is as hazy as the land itself seen from here (unfogged, far hills stood out sharp
+            // and dark in the water).
+#ifdef DISTANT_HORIZONS
+            float reflectRange = max(far, float(dhRenderDistance));
+#else
+            float reflectRange = far;
+#endif
+            ssr.rgb = applyFog(ssr.rgb, mat3(gbufferModelViewInverse) * hitView, reflectRange);
+        }
         reflection = mix(reflection, ssr.rgb, ssr.a);
 #endif
         result = mix(result, reflection, fresnel);

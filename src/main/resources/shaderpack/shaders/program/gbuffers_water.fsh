@@ -54,7 +54,7 @@ void main() {
         float lum = luminance(texture(gtexture, texcoord).rgb);
         float streak = running ? smoothstep(0.645, 0.78, lum) : smoothstep(0.6, 0.8, lum);
         float near = 1.0 - smoothstep(24.0, 64.0, dist);
-        float h = running ? streak * 0.06 * near : 0.0;
+        float h = running ? streak * 0.035 * near : 0.0;
         vec3 dpdx = dFdx(playerPos);
         vec3 dpdy = dFdy(playerPos);
         vec2 dh = vec2(dFdx(h), dFdy(h));
