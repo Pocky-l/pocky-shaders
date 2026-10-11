@@ -56,8 +56,9 @@ vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliag
     float distort = shadowDistortFactor(clip.xy);
     float texelBlocks = 2.0 * shadowDistance / float(shadowMapResolution);
 
-    // Normal offset, about two shadow texels at this distance; foliage has no reliable normal.
-    vec3 offset = foliage ? lightDirection() * 0.12 : worldNormal * (2.0 * texelBlocks * distort + 0.01);
+    // Normal offset, about two shadow texels at this distance; foliage has no reliable normal and waves: offset
+    // towards the light far enough that a swaying plant does not keep shadowing itself (that made grass blink).
+    vec3 offset = foliage ? lightDirection() * 0.3 : worldNormal * (2.0 * texelBlocks * distort + 0.01);
     clip = projectAndDivide(shadowProjection, (shadowModelView * vec4(playerPos + offset, 1.0)).xyz);
     distort = shadowDistortFactor(clip.xy);
     vec3 coord = distortShadowClip(clip) * 0.5 + 0.5;
@@ -72,8 +73,9 @@ vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliag
     // edge (a single lookup flickered while walking, as the map slides under the world); further out a texel and a
     // half apart, so the coarser shadow texels do not show as stairs. Opaque casters are tested first and the
     // translucent pass is read only where they let light through.
-    bool near = dist < 48.0;
-    float radius = (near ? 0.5 : 0.75) / float(shadowMapResolution);
+    // Crisp only on block faces; plants and leaves get a soft, steady shade (sharpened, their swaying flickered).
+    bool near = dist < 48.0 && pixelLock;
+    float radius = (near ? 0.5 : (foliage ? 1.25 : 0.75)) / float(shadowMapResolution);
     float solid = 0.0;
     for (int i = 0; i < 4; i++) {
         vec2 o = vec2((i & 1) == 0 ? -radius : radius, (i & 2) == 0 ? -radius : radius);
