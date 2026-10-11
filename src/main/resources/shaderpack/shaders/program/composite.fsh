@@ -416,7 +416,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
         vec3 ringLight = vec3(0.05);
 #endif
-        result = mix(result, vanillaLightResponse(ringLight), ringGlow * 0.18);
+        result = mix(result, vanillaLightResponse(ringLight), ringGlow * 0.12);
     }
     return result;
 }

@@ -48,7 +48,7 @@ vec3 rainRipples(vec2 p, float time, float amount) {
             float ring = abs(dist - radius) < 0.5 * PX ? 1.0 : 0.0;
             float fade = (1.0 - age) * (1.0 - age);
             float splash = dist < 0.5 * PX && age < 0.12 ? 1.0 : 0.0;
-            slope += ring * fade * 0.08 * d / (dist + 1e-4);
+            slope += ring * fade * 0.06 * d / (dist + 1e-4);
             glow += ring * fade + splash * 0.6;
         }
     }
