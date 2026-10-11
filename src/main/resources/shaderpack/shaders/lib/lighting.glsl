@@ -178,6 +178,8 @@ vec3 shade(Surface s, Lights lights, float noise) {
 
     vec3 direct = vec3(0.0);
     vec3 sheen = vec3(0.0);
+    // How much of the sun reaches the surface (shadow, cloud shadow, sky gate), 0..1.
+    float sunLit = 0.0;
 #ifdef DIM_OVERWORLD
     float nl = dot(s.normal, l);
     float diffuse;
@@ -208,6 +210,7 @@ vec3 shade(Surface s, Lights lights, float noise) {
         visibility *= cloudShadow(s.playerPos, l);
 #endif
         direct = lights.direct / PI * diffuse * visibility * skyGate;
+        sunLit = luminance(visibility) * skyGate;
 #ifdef SURFACE_SHEEN
         if (s.material != MAT_PLANT && s.material != MAT_PARTICLE && nl > 0.0) {
             sheen = lights.direct * sunSheen(s.normal, viewDir, l, sheenRoughness(s.material)) * visibility * skyGate
@@ -261,9 +264,22 @@ vec3 shade(Surface s, Lights lights, float noise) {
             r.y = abs(r.y);
             float f = fresnelSchlick(dot(viewDir, s.normal), 0.02) * film * 0.5;
             color += vanillaLightResponse(sampleSkyLut(r, sunDirection())) * f;
-            // A small, sharp glint of the sun, never a broad plastic highlight.
-            color += lights.direct * ggxSpecular(s.normal, viewDir, l, 0.12) * film * 0.25 * discClarity()
-                    * (dot(direct, vec3(1.0)) > 0.0 ? 1.0 : 0.0);
+            // The sun on wet ground glistens: every wet texel is a tiny tilted mirror that flashes when it reflects
+            // the sun, so the reflection is a scatter of single sparkling pixels around where the mirror image would
+            // be, twinkling as you move - never one smooth glowing ball. Each glint is only a little brighter than
+            // a white block in the sun. Far away, where a texel is smaller than a pixel, a faint soft sheen remains.
+            float sun = film * sunLit * discClarity() * step(0.0, dot(s.normal, l));
+            if (sun > 0.0) {
+                vec3 texel = floor(worldPos * 16.0 + s.normal * 0.01);
+                vec3 tilt = vec3(hash13(texel + 11.3), hash13(texel + 27.1), hash13(texel + 43.7)) - 0.5;
+                vec3 facet = normalize(s.normal + tilt * 0.35);
+                float mirror = dot(reflect(-viewDir, facet), l);
+                float glint = smoothstep(0.97, 0.995, mirror);
+                float dist = length(s.playerPos);
+                float near = 1.0 - smoothstep(24.0, 48.0, dist);
+                float soft = min(ggxSpecular(s.normal, viewDir, l, 0.35), 0.6) * 0.15;
+                color += lights.direct * sun * (glint * 0.2 * near + soft * (1.0 - near));
+            }
         }
     }
 #endif
