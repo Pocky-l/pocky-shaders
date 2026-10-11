@@ -84,10 +84,6 @@ void main() {
 
     Surface s;
     s.albedo = srgbToLinear(color.rgb);
-#if defined PROG_TERRAIN
-    s.albedo = tameBrightAlbedo(s.albedo, srgbToLinear(textureLod(gtexture, texcoord, 4.0).rgb * vertexColor.rgb),
-            frameLights().direct);
-#endif
     s.playerPos = playerPos;
     s.shadowPos = shadowPos;
     s.normal = n;

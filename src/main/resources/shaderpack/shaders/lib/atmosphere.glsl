@@ -72,10 +72,10 @@ vec3 adaptedTint(vec3 transmittance, float exponent) {
     return c * (luminance(transmittance) / max(luminance(c), 1e-6));
 }
 
-// The sun's light and disc: softened by day, but the last few degrees above the horizon keep a real orange (softened
+// The sun's light and disc: nearly white by day (vanilla daylight is neutral), but the last few degrees above the horizon keep a real orange (softened
 // all the way down, the setting sun lit the land a pale lemon yellow).
 vec3 sunTint(vec3 transmittance, float sunY) {
-    return adaptedTint(transmittance, mix(0.6, 0.9, smoothstep(0.3, 0.05, sunY)));
+    return adaptedTint(transmittance, mix(0.35, 0.9, smoothstep(0.3, 0.05, sunY)));
 }
 
 // Share of a light body's direct light while it is up. Zero at the horizon: Iris switches the shadow light between

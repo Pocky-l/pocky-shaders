@@ -79,21 +79,11 @@ float sunSheen(vec3 n, vec3 v, vec3 l, float roughness) {
     return ggxSpecular(n, v, l, roughness) * fresnelSchlick(dot(v, h), 0.02);
 }
 
-// Near-white materials (snow - vanilla's and modded snow covers alike -, ice, white wool, quartz, calcite) lit by the
-// full sun ran into the top of the tonemap as flat white sheets. Judged by the block's average colour (a coarse mip
-// of its texture, x the vertex tint), they are darkened as a whole and their texture's contrast is raised, so they
-// keep grain and shape. Only under a strong sun: in overcast light or a blizzard snow stays bright white. Darker
-// materials are untouched.
-vec3 tameBrightAlbedo(vec3 albedo, vec3 average, vec3 directLight) {
-    float averageLum = luminance(average);
-    float bright = smoothstep(0.45, 0.75, averageLum) * smoothstep(1.0, 5.0, luminance(directLight));
-    if (bright <= 0.0) {
-        return albedo;
-    }
-    // Under the full sun a surface at albedo ~0.4 already sits high on the tonemap curve (where it still has slope).
-    float scale = (0.38 + (averageLum - 0.5) * 0.1) / averageLum;
-    vec3 detail = pow(max(albedo, 1e-4) / max(average, vec3(1e-4)), vec3(2.2));
-    return mix(albedo, average * scale * detail, bright);
+// The game's look: light fills up like vanilla's light map, the full sun brings a surface to about its texture colour
+// and no further, while dim light (night, shade, caves) stays nearly as it is. Physically the noon sun is ten times
+// the sky and it painted grass lime and stone white; compressed, textures keep their colours and shade stays light.
+vec3 vanillaLightResponse(vec3 light) {
+    return light / (1.0 + luminance(light) * LIGHT_RESPONSE);
 }
 
 // Light reaching the surface from the light held in hand.
@@ -152,7 +142,10 @@ vec3 shade(Surface s, Lights lights, float noise) {
     } else if (s.material == MAT_LEAVES) {
         diffuse = saturate(nl) * 0.5 + 0.35;
     } else {
-        diffuse = saturate(nl) * roughDiffuse(saturate(nl), saturate(dot(s.normal, viewDir)),
+        // Wrapped: side faces keep part of the light even with the sun overhead, close to vanilla's face shading
+        // (sides about 0.6..0.8 of the top) instead of turning dark at noon.
+        float wrapped = saturate((nl + 0.6) / 1.6);
+        diffuse = wrapped * roughDiffuse(saturate(nl), saturate(dot(s.normal, viewDir)),
                 saturate(dot(l, normalize(l + viewDir))), 0.8);
     }
     // Direct light only reaches places the sky light reaches: no sun through cave walls beyond the shadow map.
@@ -197,7 +190,7 @@ vec3 shade(Surface s, Lights lights, float noise) {
 #endif
 
     // The sheen is reflected light: white, not tinted by the albedo.
-    vec3 color = s.albedo * ((ambient + block) * s.ao + direct) + sheen;
+    vec3 color = s.albedo * vanillaLightResponse((ambient + block) * s.ao + direct) + sheen;
 
 #if defined WET_SURFACES && defined DIM_OVERWORLD
     // Rain darkens exposed surfaces and gives them a soft sky sheen.

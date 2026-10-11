@@ -54,7 +54,7 @@ void main() {
             // Single scattering alone makes skylight far too blue (the missing multiple scattering and the light
             // the ground bounces back up are both close to white): shadows would turn cyan.
             vec3 sky = ambientIrradiance(sunDir);
-            sky = mix(vec3(luminance(sky)), sky, 0.7);
+            sky = mix(vec3(luminance(sky)), sky, 0.5);
             // Rainy nights keep a little more light (only at night: by day the overcast deck sets the level).
             float night = smoothstep(0.05, -0.1, sunDir.y);
             value = max(sky, vec3(0.05, 0.06, 0.08) * (1.0 + rainStrength * 0.6 * night));

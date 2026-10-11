@@ -18,13 +18,15 @@ const float shadowIntervalSize = 16.0;
 #define SHADOW_STYLE 1 // [0 1]
 #define SHADOW_SOFTNESS 1.0 // [0.5 0.75 1.0 1.5 2.0 3.0]
 // Share of the sunlight that still reaches shaded places (0 = realistic dark shade).
-#define SHADOW_LIGHT 0.2 // [0.0 0.1 0.2 0.3 0.4]
+#define SHADOW_LIGHT 0.1 // [0.0 0.1 0.2 0.3 0.4]
 #define COLORED_SHADOWS
 #define SSAO
 #define SSAO_STRENGTH 1.0 // [0.5 0.75 1.0 1.25 1.5 2.0]
 #define HANDHELD_LIGHT
 #define SURFACE_SHEEN
 #define BLOCK_LIGHT_WARMTH 1.0 // [0.0 0.5 1.0 1.5]
+// How strongly bright light is compressed towards vanilla's light map (0 = physical light: a lime noon).
+#define LIGHT_RESPONSE 1.0 // [0.0 0.5 0.75 1.0 1.25 1.5]
 #define AMBIENT_MIN 0.012 // [0.0 0.006 0.012 0.025 0.05]
 
 // Nature

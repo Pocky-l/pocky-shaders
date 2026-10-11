@@ -214,7 +214,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
         vec3 light = vec3(0.04);
 #endif
-        light += blockLightColor() * 0.02;
+        light = vanillaLightResponse(light + blockLightColor() * 0.02);
         // Shallows glow turquoise over the bottom, open deep water turns a darker, richer blue.
         vec3 shallowScatter = mix(vec3(0.05, 0.22, 0.26), tint * vec3(0.3, 0.5, 0.55), 0.5);
         vec3 deepScatter = mix(vec3(0.02, 0.10, 0.22), tint * vec3(0.15, 0.3, 0.5), 0.5);
@@ -273,7 +273,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
         vec3 foamLight = vec3(0.05);
 #endif
-        foamLight += blockLightColor() * 0.02;
+        foamLight = vanillaLightResponse(foamLight + blockLightColor() * 0.02);
         result = mix(result, foamLight * 0.85, runningFoam * 0.75);
     }
 
@@ -291,6 +291,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
             vec3 foamLight = vec3(0.05);
 #endif
+            foamLight = vanillaLightResponse(foamLight);
             float foam = max(waterFoam((surfacePlayer + cameraPosition).xz) * amount * 0.25, whitecaps);
             result = mix(result, foamLight * 0.8, foam);
         }

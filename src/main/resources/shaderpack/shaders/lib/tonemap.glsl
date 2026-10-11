@@ -31,7 +31,7 @@ vec3 grade(vec3 color) {
     // Gentle warm white balance: lifts reds, holds back blues. Rain cools it down and takes some colour out - a
     // warm grade turns a grey storm sickly yellow-green.
     float warmth = WARMTH * (1.0 - 0.85 * rainStrength);
-    vec3 warm = vec3(1.0 + 0.02 * warmth, 1.0 + 0.005 * warmth, 1.0 - 0.03 * warmth);
+    vec3 warm = vec3(1.0 + 0.01 * warmth, 1.0, 1.0 - 0.015 * warmth);
     color *= warm * mix(vec3(1.0), vec3(0.97, 1.0, 1.04), rainStrength);
     float l = luminance(color);
     float saturation = SATURATION * (1.0 - 0.12 * rainStrength - 0.13 * stormDarkness());

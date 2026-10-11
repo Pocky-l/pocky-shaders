@@ -104,3 +104,5 @@ value.SHADOW_STYLE.1=Pixel
 option.SHADOW_STYLE.comment=Pixel: crisp shadows on the texel grid of the textures, like the game itself (faster). Soft: filtered shadows with soft edges.
 option.SHADOW_LIGHT=Shadow Brightness
 option.SHADOW_LIGHT.comment=How much sunlight still reaches shaded places. 0 = realistic dark shade.
+option.LIGHT_RESPONSE=Vanilla Light
+option.LIGHT_RESPONSE.comment=How close bright sunlight stays to the game's own colours. 0 = physical light (much brighter noon).

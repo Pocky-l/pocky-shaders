@@ -75,8 +75,7 @@ void main() {
         discard;
     }
     Surface s;
-    s.albedo = tameBrightAlbedo(srgbToLinear(color.rgb),
-            srgbToLinear(textureLod(gtexture, texcoord, 4.0).rgb * vertexColor.rgb), frameLights().direct);
+    s.albedo = srgbToLinear(color.rgb);
     s.playerPos = playerPos;
     s.shadowPos = playerPos;
     s.normal = n;
