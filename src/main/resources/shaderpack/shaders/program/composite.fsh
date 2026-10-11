@@ -144,6 +144,10 @@ const vec3 WATER_DARK_LIGHT = vec3(0.011, 0.013, 0.015);
 vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float normalSpread) {
     vec3 worldNormal = decodeWaterNormal(waterData.xy);
     float runningFoam = decodeWaterFoam(waterData.xy);
+    // Torches, lanterns, sea lanterns and glowstone light the water around them like any block: lit only by the sky,
+    // the water stayed dark next to a lamp, and lamps under it hardly showed from above.
+    vec3 blockGlow = blockLightColor() * blockLightCurve(decodeWaterBlockLight(waterData.xy)) * BLOCK_LIGHT_EXPOSURE
+            / sceneExposure();
     // Stored foam in fifteenths: still water 0..1 (its texture sheen), 2 a tagged Petrichor puddle, streams and
     // waterfalls 3 and more.
     float foamCode = floor(runningFoam * 15.0 + 0.5);
@@ -267,7 +271,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
         vec3 light = vec3(0.04);
 #endif
-        vec3 mirrored = light * vec3(0.05, 0.22, 0.26) * 1.4 + vec3(0.002, 0.006, 0.008);
+        vec3 mirrored = (light + blockGlow * 0.5) * vec3(0.05, 0.22, 0.26) * 1.4 + vec3(0.002, 0.006, 0.008);
         result = mix(mirrored, below * 0.9, through);
     } else {
         // How far out at sea: the floor drops away from the shore, so the depth under the surface tells (open ocean is
@@ -296,6 +300,11 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         scatterColor = mix(scatterColor, vec3(luminance(scatterColor)) * vec3(0.8, 1.0, 1.0), 0.5 * thunderStrength);
         result = below * transmit + scatterColor * (1.0 - exp(-waterDist * 0.4 / WATER_CLARITY));
         result *= mix(0.7, 1.0, smoothstep(0.1, 0.8, waterDist));
+        // The lamp's light scattered in the water: warm near it, turning the water's own blue-green with depth (the
+        // red goes first). A puddle's film is too thin to glow - the lit ground shows through it.
+        vec3 glowColor = mix(vec3(1.0), vec3(0.45, 0.8, 0.85) * mix(vec3(1.0), srgbToLinear(tint) * 1.5, 0.3),
+                smoothstep(0.5, 4.0, waterDist));
+        result += blockGlow * glowColor * 0.35 * (1.0 - exp(-waterDist * 0.7 / WATER_CLARITY));
         if (running) {
             // A stream or a waterfall is only a block or less of water: by absorption alone it was clear as glass.
             // Like vanilla's flowing water it carries its own body colour: the biome's water tint, lit like a block.
@@ -305,7 +314,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
             vec3 bodyLight = vec3(0.05);
 #endif
-            bodyLight = vanillaLightResponse(bodyLight + WATER_DARK_LIGHT);
+            bodyLight = vanillaLightResponse(bodyLight + WATER_DARK_LIGHT) + blockGlow;
             // Lit like whatever shows behind it (a torch-lit cave wall), never darker: in a dark cave the falling water
             // was only the faint amber floor light - a muddy brown curtain hiding the cave behind it.
             bodyLight = max(bodyLight, vec3(luminance(below) * 2.0));
@@ -381,7 +390,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
         vec3 foamLight = vec3(0.05);
 #endif
-        foamLight = vanillaLightResponse(foamLight + WATER_DARK_LIGHT);
+        foamLight = vanillaLightResponse(foamLight + WATER_DARK_LIGHT) + blockGlow * 0.8;
         foamLight = max(foamLight, vec3(luminance(below) * 1.2));
         // Streaks are water stirred up, a little of its colour in them, not white paint (a low sun made them beige).
         vec3 tintColor = srgbToLinear(tint);

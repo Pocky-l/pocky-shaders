@@ -1,4 +1,4 @@
-// Water only leaves its surface normal, biome tint and sky light in colortex4: the composite pass draws it with
+// Water only leaves its surface normal, biome tint, sky and block light in colortex4: the composite pass draws it with
 // refraction, absorption and reflections. Other translucent blocks are shaded here and blended into colortex3.
 
 #include "/lib/common.glsl"
@@ -79,7 +79,7 @@ void main() {
             foam = 2.0 / 15.0;
         }
         outTranslucent = vec4(0.0);
-        outWater = vec4(encodeWaterNormal(wn, foam), packWater(vertexColor.rgb, lightmap.y), 1.0);
+        outWater = vec4(encodeWaterNormal(wn, foam, lightmap.x), packWater(vertexColor.rgb, lightmap.y), 1.0);
         return;
     }
 
