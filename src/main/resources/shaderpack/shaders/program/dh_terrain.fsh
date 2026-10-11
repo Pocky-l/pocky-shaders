@@ -74,13 +74,23 @@ void main() {
         albedo = srgbToLinear(vec3(0.5, 0.655, 0.333) * 0.6);
     }
     albedo *= leaves ? 0.85 : 0.95;
+    // Leaves of snowy biomes reach DH grey (Hoarfrost whitens their tint): the bare, dark needle texture without the
+    // snow that lies on the crowns near the player, which the blue skylight turned into navy-blue forests. Grey leaves
+    // are frosted - fully on top, patchy on the sides.
+    float frost = 0.0;
+    if (leaves) {
+        float peak = max(vertexColor.r, max(vertexColor.g, vertexColor.b));
+        float sat = (peak - min(vertexColor.r, min(vertexColor.g, vertexColor.b))) / max(peak, 1e-3);
+        frost = (1.0 - smoothstep(0.08, 0.2, sat)) * mix(0.6, 0.95, saturate(n.y));
+        albedo = mix(albedo, srgbToLinear(vec3(0.84, 0.87, 0.9)), frost);
+    }
     float detail = 1.0 - smoothstep(180.0, 420.0, dist);
     vec3 cellPos = playerPos + cameraPosition - n * 0.01;
     float blockVariation = hash13(floor(cellPos)) - 0.5;
     float variation = blockVariation * 0.12 * (1.0 - smoothstep(400.0, 900.0, dist));
     if (detail > 0.0) {
         float texel = hash13(floor(cellPos * 4.0) + 17.0) - 0.5;
-        variation += texel * (leaves ? 0.55 : 0.22) * detail;
+        variation += texel * (leaves ? 0.55 - 0.3 * frost : 0.22) * detail;
     }
     albedo *= 1.0 + variation;
 
