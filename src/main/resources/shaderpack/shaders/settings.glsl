@@ -26,7 +26,7 @@ const float shadowIntervalSize = 16.0;
 #define SURFACE_SHEEN
 #define BLOCK_LIGHT_WARMTH 1.0 // [0.0 0.5 1.0 1.5]
 // How strongly bright light is compressed towards vanilla's light map (0 = physical light: a lime noon).
-#define LIGHT_RESPONSE 1.0 // [0.0 0.5 0.75 1.0 1.25 1.5]
+#define LIGHT_RESPONSE 0.75 // [0.0 0.25 0.5 0.75 1.0 1.25 1.5]
 #define AMBIENT_MIN 0.012 // [0.0 0.006 0.012 0.025 0.05]
 
 // Nature

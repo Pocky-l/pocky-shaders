@@ -136,8 +136,14 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #ifdef WATER_REFRACTION
     if (isEyeInWater <= 1) {
         float behind = length(viewPosition(uv, true) - surfaceView);
-        // Seen from below the surface faces down.
-        vec3 flatNormal = mat3(gbufferModelView) * vec3(0.0, worldNormal.y >= 0.0 ? 1.0 : -1.0, 0.0);
+        // The face's own normal without the waves: up or down for the surface (seen from below it faces down), the
+        // nearest horizontal axis for the side of a stream or a waterfall.
+        vec3 faceNormal = vec3(0.0, worldNormal.y >= 0.0 ? 1.0 : -1.0, 0.0);
+        if (abs(worldNormal.y) < 0.5) {
+            faceNormal = abs(worldNormal.x) > abs(worldNormal.z) ? vec3(sign(worldNormal.x), 0.0, 0.0)
+                    : vec3(0.0, 0.0, sign(worldNormal.z));
+        }
+        vec3 flatNormal = mat3(gbufferModelView) * faceNormal;
         vec2 offset = (viewNormal.xy - flatNormal.xy) * 0.06 * saturate(behind * 0.25);
         vec2 candidate = uv + offset / max(1.0, -surfaceView.z * 0.08);
         if (texture(depthtex1, candidate).r > texture(depthtex0, uv).r) {
@@ -185,7 +191,11 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         float cosI = saturate(dot(-normalize(surfacePlayer), down));
         float sinT2 = 1.777 * (1.0 - cosI * cosI);
         float through = 0.0;
-        if (sinT2 < 1.0) {
+        if (abs(worldNormal.y) < 0.5) {
+            // The side of a water column (standing in a stream or a waterfall, at the edge of the water): the water
+            // simply continues into the air there - no surface to reflect from, the world beyond stays in view.
+            through = 1.0;
+        } else if (sinT2 < 1.0) {
             float cosT = sqrt(1.0 - sinT2);
             float rs = (1.333 * cosI - cosT) / (1.333 * cosI + cosT);
             float rp = (1.333 * cosT - cosI) / (1.333 * cosT + cosI);
@@ -266,8 +276,9 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     }
 #endif
 
-    if (runningFoam > 0.0 && isEyeInWater == 0) {
-        // Streams and waterfalls: white, broken water lit by the sky and the sun.
+    if (runningFoam > 0.0 && isEyeInWater == 0 && !puddle) {
+        // Streams and waterfalls: white, broken water lit by the sky and the sun; on still water the faint light
+        // streaks of the game's water texture.
 #ifdef DIM_OVERWORLD
         vec3 foamLight = (ambientLightColor() + directLightColor() * saturate(dot(worldNormal, lightDirection()))) / PI * sky;
 #else
