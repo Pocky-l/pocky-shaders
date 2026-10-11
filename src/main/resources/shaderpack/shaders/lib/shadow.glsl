@@ -68,45 +68,33 @@ vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliag
     float edge = smoothstep(0.65, 0.95, max(abs(clip.x), abs(clip.y)));
 
 #if SHADOW_STYLE == 1
-    // Crisp edges: a single hardware-filtered lookup up close, where shadow texels are finer than block texels; four
-    // further out, so the coarser shadow texels do not show as stairs. Opaque casters are tested first and the
+    // Crisp edges from four hardware-filtered lookups: up close half a shadow texel apart, sharpened into a cartoon
+    // edge (a single lookup flickered while walking, as the map slides under the world); further out a texel and a
+    // half apart, so the coarser shadow texels do not show as stairs. Opaque casters are tested first and the
     // translucent pass is read only where they let light through.
-    float solid;
-    float total;
-    if (dist < 48.0) {
-        solid = texture(shadowtex1, coord);
-        if (solid <= 0.0) {
-            return vec3(edge);
-        }
+    bool near = dist < 48.0;
+    float radius = (near ? 0.5 : 0.75) / float(shadowMapResolution);
+    float solid = 0.0;
+    for (int i = 0; i < 4; i++) {
+        vec2 o = vec2((i & 1) == 0 ? -radius : radius, (i & 2) == 0 ? -radius : radius);
+        solid += texture(shadowtex1, vec3(coord.xy + o, coord.z));
+    }
+    solid *= 0.25;
+    if (solid <= 0.0) {
+        return vec3(edge);
+    }
+    float total = solid;
 #ifdef COLORED_SHADOWS
-        total = texture(shadowtex0, coord);
-#else
-        total = solid;
+    total = 0.0;
+    for (int i = 0; i < 4; i++) {
+        vec2 o = vec2((i & 1) == 0 ? -radius : radius, (i & 2) == 0 ? -radius : radius);
+        total += texture(shadowtex0, vec3(coord.xy + o, coord.z));
+    }
+    total *= 0.25;
 #endif
-        // Sharpen the one-texel filter ramp into a cartoon edge.
-        solid = smoothstep(0.2, 0.8, solid);
-        total = smoothstep(0.2, 0.8, total);
-    } else {
-        float radius = 0.75 / float(shadowMapResolution);
-        solid = 0.0;
-        total = 0.0;
-        for (int i = 0; i < 4; i++) {
-            vec2 o = vec2((i & 1) == 0 ? -radius : radius, (i & 2) == 0 ? -radius : radius);
-            solid += texture(shadowtex1, vec3(coord.xy + o, coord.z));
-        }
-        solid *= 0.25;
-        if (solid <= 0.0) {
-            return vec3(edge);
-        }
-#ifdef COLORED_SHADOWS
-        for (int i = 0; i < 4; i++) {
-            vec2 o = vec2((i & 1) == 0 ? -radius : radius, (i & 2) == 0 ? -radius : radius);
-            total += texture(shadowtex0, vec3(coord.xy + o, coord.z));
-        }
-        total *= 0.25;
-#else
-        total = solid;
-#endif
+    if (near) {
+        solid = smoothstep(0.15, 0.85, solid);
+        total = smoothstep(0.15, 0.85, total);
     }
     return mix(shadowTint(coord.xy, solid, total), vec3(1.0), edge);
 #else

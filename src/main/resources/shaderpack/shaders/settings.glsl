@@ -10,6 +10,9 @@ const float shadowDistance = 192.0; // [96.0 128.0 160.0 192.0 256.0 320.0 384.0
 // Shadow casters are drawn into the shadow map only within the shadow distance (by default Iris draws every chunk of
 // the render distance, all of it wasted beyond the shadow distance).
 const float shadowDistanceRenderMul = 1.0;
+// The shadow map follows the player smoothly. By default Iris moves it in 2-block jumps; around the player the
+// distortion re-maps every shadow texel at each jump, and crisp shadows jerked while walking.
+const float shadowIntervalSize = 0.0;
 // 1 = crisp pixel shadows on the 1/16-block texel grid of the textures (cheap), 0 = soft filtered shadows.
 #define SHADOW_STYLE 1 // [0 1]
 #define SHADOW_SOFTNESS 1.0 // [0.5 0.75 1.0 1.5 2.0 3.0]
