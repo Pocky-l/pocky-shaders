@@ -88,28 +88,28 @@ float opaqueViewZ(vec2 uv) {
 // water). Returns rgb + confidence and, through hitView, where the ray hit.
 vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise, out vec3 hitView) {
     hitView = vec3(0.0);
-    vec3 rayStep = viewDir * (0.6 + 0.04 * length(viewPos));
+    // Small steps near the water that grow along the ray: coarse first steps sliced reflected walls into bands (rows
+    // that happened to land a step on a ledge showed it, the rows between missed it).
+    const float GROWTH = SSR_STEPS <= 16 ? 1.25 : 1.18;
+    vec3 rayStep = viewDir * (0.25 + 0.02 * length(viewPos));
     vec3 pos = viewPos + rayStep * noise;
     bool wasBehind = false;
     for (int i = 0; i < SSR_STEPS; i++) {
         pos += rayStep;
-        rayStep *= 1.12;
+        rayStep *= GROWTH;
         vec3 screen = viewToScreen(pos);
         if (any(lessThan(screen.xy, vec2(0.0))) || any(greaterThan(screen.xy, vec2(1.0))) || pos.z > -near) {
             break;
         }
-        float sceneZ = opaqueViewZ(screen.xy);
-        float diff = sceneZ - pos.z;
+        float diff = opaqueViewZ(screen.xy) - pos.z;
         bool behind = diff > 0.0;
-        // Only the step where the ray goes behind a surface is searched (while it stays behind, it is in a gap).
-        bool entered = behind && !wasBehind;
+        // A step that just went behind a surface, or one that is close behind a surface: search the crossing, then
+        // accept it only if the ray really touches that surface there. A ray that merely passes behind an object (a
+        // gap of more than a block or so) marches on - accepting those smeared trees and shores downwards.
+        bool test = behind && (!wasBehind || diff < length(rayStep) * 1.5);
         wasBehind = behind;
-        if (entered) {
-            // The ray went behind something between the last two steps: find where it crossed, then accept it only
-            // if it really touches that surface there. A ray that merely passed behind an object (a gap of more
-            // than a block or so) marches on - accepting those smeared trees and shores downwards, while a fixed thin
-            // test missed real hits on neighbouring pixels and striped the reflection.
-            vec3 a = pos - rayStep / 1.12;
+        if (test) {
+            vec3 a = pos - rayStep / GROWTH;
             vec3 b = pos;
             for (int j = 0; j < 5; j++) {
                 vec3 m = (a + b) * 0.5;
