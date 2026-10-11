@@ -26,12 +26,42 @@ in vec3 worldNormal;
 flat in int material;
 flat in float emissive;
 
+#if defined PROG_TERRAIN && SHADOW_STYLE == 1
+// Position of the centre of the texture texel this fragment belongs to (found through the screen-space derivatives of
+// the position and the texture coordinate, exact within a flat triangle). Shadows looked up there are pixelated like
+// the textures and stay attached to them: on a swaying grass blade or leaf the pixel pattern moves with it instead of
+// flickering. Taken outside any branch (derivatives).
+vec3 texelCentre(vec3 pos, vec2 uv) {
+    vec2 size = vec2(textureSize(gtexture, 0));
+    vec2 t = uv * size;
+    vec2 delta = floor(t) + 0.5 - t;
+    vec2 tx = dFdx(t);
+    vec2 ty = dFdy(t);
+    vec3 px = dFdx(pos);
+    vec3 py = dFdy(pos);
+    float det = tx.x * ty.y - tx.y * ty.x;
+    if (abs(det) < 1e-8) {
+        return pos;
+    }
+    float a = (delta.x * ty.y - delta.y * ty.x) / det;
+    float b = (tx.x * delta.y - tx.y * delta.x) / det;
+    vec3 offset = a * px + b * py;
+    // Grazing views: the derivatives get unreliable, a texel is never this far off.
+    return dot(offset, offset) < 0.04 ? pos + offset : pos;
+}
+#endif
+
 /* RENDERTARGETS: 0,1 */
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outData;
 
 void main() {
     vec4 tex = texture(gtexture, texcoord);
+#if defined PROG_TERRAIN && SHADOW_STYLE == 1
+    vec3 shadowPos = texelCentre(playerPos, texcoord);
+#else
+    vec3 shadowPos = playerPos;
+#endif
 #if defined PROG_TERRAIN
     // separateAo: the vertex alpha carries vanilla ambient occlusion instead of transparency.
     vec4 color = vec4(tex.rgb * vertexColor.rgb, tex.a);
@@ -59,6 +89,7 @@ void main() {
             frameLights().direct);
 #endif
     s.playerPos = playerPos;
+    s.shadowPos = shadowPos;
     s.normal = n;
     s.lightmap = lightmap;
     // Vanilla's corner occlusion is strong inside a canopy of full leaf blocks; squared, it turned tree crowns into

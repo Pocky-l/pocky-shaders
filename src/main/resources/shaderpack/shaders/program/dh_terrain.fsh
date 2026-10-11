@@ -91,6 +91,7 @@ void main() {
     Surface s;
     s.albedo = albedo;
     s.playerPos = playerPos;
+    s.shadowPos = playerPos;
     s.normal = n;
     s.lightmap = lm;
     s.ao = 1.0;

@@ -3,6 +3,7 @@
 struct Surface {
     vec3 albedo;        // linear
     vec3 playerPos;     // relative to the camera, world axes
+    vec3 shadowPos;     // where the shadow is looked up: the centre of the texture texel (pixel shadows), else playerPos
     vec3 normal;        // world space
     vec2 lightmap;      // x: block light, y: sky light, both 0..1
     float ao;           // vanilla ambient occlusion
@@ -160,8 +161,8 @@ vec3 shade(Surface s, Lights lights, float noise) {
         vec3 visibility = vec3(1.0);
 #ifdef SHADOWS
 #ifdef SHADOW_LOOKUP
-        bool pixelLock = !foliage && s.material != MAT_ENTITY && s.material != MAT_HAND && s.material != MAT_PARTICLE;
-        visibility = shadowVisibility(s.playerPos, s.normal, noise, foliage, pixelLock);
+        bool pixelLock = s.material != MAT_ENTITY && s.material != MAT_HAND && s.material != MAT_PARTICLE;
+        visibility = shadowVisibility(s.shadowPos, s.normal, noise, foliage, pixelLock);
 #endif
 #endif
         // Shade is never black: a little of the sun reaches it, like the soft, light shade of the vanilla look.

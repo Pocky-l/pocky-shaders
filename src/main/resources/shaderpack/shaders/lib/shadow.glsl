@@ -41,17 +41,9 @@ vec3 shadowTint(vec2 coord, float solid, float total) {
 }
 
 // Sun/moon visibility (rgb: tinted by stained glass and water above). playerPos is relative to the camera.
-// pixelLock: the surface is a block face on the 1/16 texel grid (not an entity or a plant).
+// pixelLock: playerPos is the centre of a texture texel (pixel shadows on terrain, see texelCentre in gbuffers_lit).
 vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliage, bool pixelLock) {
     float dist = length(playerPos);
-#if SHADOW_STYLE == 1
-    // Pixel shadows, like the game's own textures: every 1/16-block texel of a block face is either lit or shaded.
-    // The lookup moves to the centre of the texel-sized cell just in front of the face.
-    if (pixelLock && dist < 96.0) {
-        vec3 world = playerPos + cameraPosition + worldNormal * (0.5 / 16.0);
-        playerPos = (floor(world * 16.0) + 0.5) / 16.0 - cameraPosition;
-    }
-#endif
     vec3 clip = projectAndDivide(shadowProjection, (shadowModelView * vec4(playerPos, 1.0)).xyz);
     float distort = shadowDistortFactor(clip.xy);
     float texelBlocks = 2.0 * shadowDistance / float(shadowMapResolution);
@@ -73,9 +65,8 @@ vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliag
     // edge (a single lookup flickered while walking, as the map slides under the world); further out a texel and a
     // half apart, so the coarser shadow texels do not show as stairs. Opaque casters are tested first and the
     // translucent pass is read only where they let light through.
-    // Crisp only on block faces; plants and leaves get a soft, steady shade (sharpened, their swaying flickered).
     bool near = dist < 48.0 && pixelLock;
-    float radius = (near ? 0.5 : (foliage ? 1.25 : 0.75)) / float(shadowMapResolution);
+    float radius = (near ? 0.5 : 0.75) / float(shadowMapResolution);
     float solid = 0.0;
     for (int i = 0; i < 4; i++) {
         vec2 o = vec2((i & 1) == 0 ? -radius : radius, (i & 2) == 0 ? -radius : radius);

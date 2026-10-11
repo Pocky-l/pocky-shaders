@@ -78,6 +78,7 @@ void main() {
     s.albedo = tameBrightAlbedo(srgbToLinear(color.rgb),
             srgbToLinear(textureLod(gtexture, texcoord, 4.0).rgb * vertexColor.rgb), frameLights().direct);
     s.playerPos = playerPos;
+    s.shadowPos = playerPos;
     s.normal = n;
     s.lightmap = lightmap;
     s.ao = 1.0;
