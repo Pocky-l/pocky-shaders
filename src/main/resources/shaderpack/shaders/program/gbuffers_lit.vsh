@@ -14,6 +14,7 @@ out vec3 playerPos;
 out vec3 worldNormal;
 flat out int material;
 flat out float emissive;
+flat out int lava;
 
 void main() {
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
@@ -27,6 +28,7 @@ void main() {
 
     material = MAT_DEFAULT;
     emissive = 0.0;
+    lava = 0;
 
 #if defined PROG_TERRAIN
     int id = int(mc_Entity.x + 0.5);
@@ -40,6 +42,7 @@ void main() {
     if (id == ID_EMISSIVE || id == ID_LAVA) {
         material = MAT_EMISSIVE;
         emissive = max(emissive, 0.8);
+        lava = id == ID_LAVA ? 1 : 0;
     } else if (id == ID_EMISSIVE_PLANT) {
         emissive = max(emissive, 0.6);
     }

@@ -25,6 +25,7 @@ in vec3 playerPos;
 in vec3 worldNormal;
 flat in int material;
 flat in float emissive;
+flat in int lava;
 
 #if defined PROG_TERRAIN && SHADOW_STYLE == 1
 // Position of the centre of the texture texel this fragment belongs to (found through the screen-space derivatives of
@@ -107,7 +108,12 @@ void main() {
     s.material = material;
 
     vec3 lit = shade(s, frameLights(), dither(gl_FragCoord.xy));
-    lit += emission(s.albedo, 3.0, material == MAT_EMISSIVE) * emissive;
+    if (lava == 1) {
+        // Molten rock lit by daylight looked like orange paint: it is almost all its own glow.
+        lit = lit * 0.15 + lavaGlow(s.albedo, playerPos + cameraPosition);
+    } else {
+        lit += emission(s.albedo, 3.0, material == MAT_EMISSIVE) * emissive;
+    }
 
     outColor = vec4(lit, color.a);
 #if !defined PROG_TEXTURED

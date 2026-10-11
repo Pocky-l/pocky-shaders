@@ -97,7 +97,9 @@ void main() {
     s.ao = 1.0;
     s.material = leaves ? MAT_LEAVES : MAT_DEFAULT;
     vec3 lit = shade(s, frameLights(), 0.5);
-    if (dhMaterial == DH_BLOCK_ILLUMINATED || dhMaterial == DH_BLOCK_LAVA) {
+    if (dhMaterial == DH_BLOCK_LAVA) {
+        lit = lit * 0.15 + lavaGlow(albedo, playerPos + cameraPosition);
+    } else if (dhMaterial == DH_BLOCK_ILLUMINATED) {
         lit += emission(albedo, 3.0, true) * 0.8;
     }
     outColor = vec4(lit, 1.0);

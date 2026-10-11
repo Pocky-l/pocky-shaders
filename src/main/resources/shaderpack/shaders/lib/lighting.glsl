@@ -297,3 +297,16 @@ vec3 emission(vec3 albedo, float strength, bool wholeBlock) {
     vec3 rich = pow(albedo / max(m, 1e-4), vec3(1.5)) * m;
     return rich * mask * strength;
 }
+
+// Glow of lava, by the heat of each texel like glowing metal: the dark crust a deep, dim red, the veins orange, the
+// brightest spots yellow and much brighter - the contrast is what makes it look hot (one strength for every texel
+// clipped the whole pool to one flat salmon). Slow waves of heat roll across the surface.
+vec3 lavaGlow(vec3 albedo, vec3 worldPos) {
+    vec2 p = worldPos.xz * 0.35;
+    float wave = valueNoise(p + frameTimeCounter * vec2(0.08, 0.05)) * 0.65
+            + valueNoise(p * 2.3 - frameTimeCounter * vec2(0.04, 0.11)) * 0.35;
+    float heat = saturate(smoothstep(0.03, 0.6, albedo.g) + (wave - 0.5) * 0.24);
+    vec3 color = mix(vec3(1.0, 0.07, 0.0), vec3(1.0, 0.36, 0.03), smoothstep(0.0, 0.45, heat));
+    color = mix(color, vec3(1.0, 0.75, 0.22), smoothstep(0.5, 1.0, heat));
+    return color * (0.3 + 0.6 * heat + 3.2 * heat * heat);
+}

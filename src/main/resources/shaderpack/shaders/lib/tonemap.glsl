@@ -14,15 +14,16 @@ vec3 filmicCurve(vec3 x) {
 
 // Per channel, the curve shifts hues as channels saturate: an orange low sun turned lemon yellow and saturated greens
 // went yellowish. Scaling the colour by the curve of its luminance keeps the hue; a colour that would leave the
-// display range keeps its hue too, with a touch of desaturation towards white (more turned lava and sunsets salmon).
+// display range keeps its hue too, and its excess spills into the weaker channels the way fire burns from red through
+// orange to yellow. Spilling towards grey lifted the blue of every bright red-orange: lava and sunsets turned pink.
 vec3 hueKeepingCurve(vec3 x) {
     float l = luminance(x);
     float mapped = filmicCurve(vec3(l)).x;
     vec3 c = x * (mapped / max(l, 1e-6));
     float peak = max(c.r, max(c.g, c.b));
     if (peak > 1.0) {
-        vec3 desaturated = mix(c, vec3(mapped), (peak - 1.0) / max(peak - mapped, 1e-6));
-        c = mix(c / peak, desaturated, 0.15);
+        c /= peak;
+        c += (1.0 - c) * c * (0.6 - 0.6 / peak);
     }
     return c;
 }
