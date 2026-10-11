@@ -240,21 +240,31 @@ vec3 shade(Surface s, Lights lights, float noise) {
     vec3 color = s.albedo * vanillaLightResponse((ambient + block) * s.ao + direct) + sheen;
 
 #if defined WET_SURFACES && defined DIM_OVERWORLD
-    // Rain darkens exposed surfaces and gives them a soft sky sheen.
+    // Rain darkens exposed surfaces; water stays as a glossy film only in the hollows.
     // Falling snow leaves nothing wet.
     float wet = wetness * (1.0 - snowWeather) * smoothstep(0.75, 0.95, sky) * saturate(s.normal.y * 0.7 + 0.3);
     if (wet > 0.01 && s.material != MAT_ENTITY && s.material != MAT_HAND) {
         // Water fills the pores: darker, and colours deepen instead of washing out.
         float lum = luminance(color);
         color = mix(color, max(mix(vec3(lum), color, 1.25), 0.0), wet) * (1.0 - wet * (foliage ? 0.3 : 0.42));
-        vec3 r = reflect(-viewDir, s.normal);
-        r.y = abs(r.y);
-        // A film of water on top faces mirrors the sky a little, plants get only their own leaf sheen.
-        float film = foliage ? 0.5 : mix(0.8, 2.2, saturate(s.normal.y));
-        float f = fresnelSchlick(dot(viewDir, s.normal), 0.03) * wet * film;
-        color += sampleSkyLut(r, sunDirection()) * f;
-        color += lights.direct * ggxSpecular(s.normal, viewDir, l, 0.25) * wet * 0.5 * discClarity()
-                * (dot(direct, vec3(1.0)) > 0.0 ? 1.0 : 0.0);
+        // Soaked dirt, stone and wood stay matte: a gloss over the whole surface (it mirrored the sky everywhere) made
+        // the ground look like plastic. Water lies in patches on top faces, texel by texel like the textures' own
+        // pixels, and in the darker texels (the cracks and hollows of a texture); on walls only a few wet texels.
+        vec3 worldPos = s.playerPos + cameraPosition;
+        float pore = hash13(floor(worldPos * 16.0 + s.normal * 0.01));
+        float hollow = 1.0 - smoothstep(0.15, 0.6, luminance(s.albedo));
+        float pool = valueNoise(floor(worldPos.xz * 16.0) / 16.0 * 0.45 + 5.0);
+        float gather = saturate(s.normal.y) * pool * 0.75 + hollow * 0.25 + pore * 0.25;
+        float film = foliage ? 0.0 : smoothstep(0.62, 0.8, gather) * smoothstep(0.3, 0.8, wet);
+        if (film > 0.0) {
+            vec3 r = reflect(-viewDir, s.normal);
+            r.y = abs(r.y);
+            float f = fresnelSchlick(dot(viewDir, s.normal), 0.02) * film * 0.5;
+            color += vanillaLightResponse(sampleSkyLut(r, sunDirection())) * f;
+            // A small, sharp glint of the sun, never a broad plastic highlight.
+            color += lights.direct * ggxSpecular(s.normal, viewDir, l, 0.12) * film * 0.25 * discClarity()
+                    * (dot(direct, vec3(1.0)) > 0.0 ? 1.0 : 0.0);
+        }
     }
 #endif
     return color;
