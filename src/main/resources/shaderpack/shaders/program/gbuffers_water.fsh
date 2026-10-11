@@ -46,14 +46,15 @@ void main() {
             wn = waterNormal(worldPos.xz, (0.4 + 0.6 * lightmap.y) * waveFade * 0.6, waterDetail(dist));
             wn.y *= sign(n.y);
         }
-        // The game's water texture shows on the surface like in vanilla: its light, animated streaks bend the surface a
-        // little and catch a faint sheen. Running water is not a clear pane: the flowing texture already moves along
-        // the current (down a waterfall, downstream on a river), its bright streaks become broken, foamy water;
-        // waterfalls churn the most. Derivatives are taken outside the branches.
+        // The game's water texture shows on the surface like in vanilla: its light, animated streaks as a faint sheen
+        // (only that - bending the surface with them broke the sun's reflection into a sparkling grid). Running water
+        // is not a clear pane: the flowing texture already moves along the current (down a waterfall, downstream on
+        // a river), its bright streaks bend the surface and become broken, foamy water; waterfalls churn the most.
+        // Derivatives are taken outside the branches.
         float lum = luminance(texture(gtexture, texcoord).rgb);
         float streak = running ? smoothstep(0.645, 0.78, lum) : smoothstep(0.6, 0.8, lum);
         float near = 1.0 - smoothstep(24.0, 64.0, dist);
-        float h = streak * (running ? 0.06 : 0.03) * near;
+        float h = running ? streak * 0.06 * near : 0.0;
         vec3 dpdx = dFdx(playerPos);
         vec3 dpdy = dFdy(playerPos);
         vec2 dh = vec2(dFdx(h), dFdy(h));
@@ -67,7 +68,7 @@ void main() {
         if (running) {
             foam = side ? 0.3 + 0.55 * streak : 0.08 + 0.45 * streak;
         } else {
-            foam = streak * 0.14 * (1.0 - smoothstep(32.0, 96.0, dist));
+            foam = streak * 0.1 * (1.0 - smoothstep(16.0, 48.0, dist));
         }
         outTranslucent = vec4(0.0);
         outWater = vec4(encodeWaterNormal(wn, foam), packWater(vertexColor.rgb, lightmap.y), 1.0);
