@@ -90,6 +90,7 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise, out vec3 hitView)
     hitView = vec3(0.0);
     vec3 rayStep = viewDir * (0.6 + 0.04 * length(viewPos));
     vec3 pos = viewPos + rayStep * noise;
+    bool wasBehind = false;
     for (int i = 0; i < SSR_STEPS; i++) {
         pos += rayStep;
         rayStep *= 1.12;
@@ -99,12 +100,18 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise, out vec3 hitView)
         }
         float sceneZ = opaqueViewZ(screen.xy);
         float diff = sceneZ - pos.z;
-        // Thin hit test: a thick one "hit" whatever the ray passed behind and smeared trees and shores downwards.
-        if (diff > 0.0 && diff < max(length(rayStep) * 1.5, 0.3)) {
-            // Refine between the last two steps.
-            vec3 a = pos - rayStep;
+        bool behind = diff > 0.0;
+        // Only the step where the ray goes behind a surface is searched (while it stays behind, it is in a gap).
+        bool entered = behind && !wasBehind;
+        wasBehind = behind;
+        if (entered) {
+            // The ray went behind something between the last two steps: find where it crossed, then accept it only
+            // if it really touches that surface there. A ray that merely passed behind an object (a gap of more
+            // than a block or so) marches on - accepting those smeared trees and shores downwards, while a fixed thin
+            // test missed real hits on neighbouring pixels and striped the reflection.
+            vec3 a = pos - rayStep / 1.12;
             vec3 b = pos;
-            for (int j = 0; j < 4; j++) {
+            for (int j = 0; j < 5; j++) {
                 vec3 m = (a + b) * 0.5;
                 if (opaqueViewZ(viewToScreen(m).xy) > m.z) {
                     b = m;
@@ -113,6 +120,9 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise, out vec3 hitView)
                 }
             }
             vec2 uv = viewToScreen(b).xy;
+            if (opaqueViewZ(uv) - b.z > 0.4 + 0.02 * length(b)) {
+                continue;
+            }
             vec2 edge = smoothstep(vec2(0.0), vec2(0.08), uv) * smoothstep(vec2(1.0), vec2(0.92), uv);
             // Rays that ran long are the least reliable: fade them out rather than end on a hard line.
             float reach = 1.0 - smoothstep(0.6, 1.0, float(i) / float(SSR_STEPS));
@@ -163,8 +173,8 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     if (isEyeInWater <= 1) {
         float behind = length(viewPosition(uv, true) - surfaceView);
         vec2 offset = (viewNormal.xy - flatNormal.xy) * 0.05 * saturate(behind * 0.25);
-        // Through a thin waterfall the streaks smeared the world behind into stripes.
-        offset *= running ? 0.3 : 1.0;
+        // None through streams and waterfalls (like vanilla): their streaks smeared and stretched the blocks behind.
+        offset *= running ? 0.0 : 1.0;
         offset /= max(1.0, -surfaceView.z * 0.08);
         // Where the full offset lands on something in front of the water (a shore, a boat), try half of it before
         // giving up: switching straight to no offset drew hard outlines around everything at the water's edge.
@@ -287,7 +297,9 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         fresnel *= mix(1.0, 0.7, smoothstep(80.0, 400.0, surfaceDist));
         // Broken, falling water is no mirror: a waterfall reflected the sky like a pane of glass.
         fresnel *= running ? 0.5 : 1.0;
-        vec3 reflection = vec3(0.0);
+        // Where nothing is found to mirror (no hit on screen, and no open sky above - a cave, under a roof) the water
+        // keeps its own colour: mirroring black there cut dark, ragged bands into the reflection.
+        vec3 reflection = result;
 #ifdef DIM_OVERWORLD
         vec3 reflectWorld = mat3(gbufferModelViewInverse) * reflectView;
         reflectWorld.y = abs(reflectWorld.y);
@@ -299,7 +311,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #endif
         // An overcast night sky still glows a little in reflections.
         skyRefl = max(skyRefl, ambientLightColor() / PI * 0.5);
-        reflection = skyRefl * smoothstep(0.3, 0.85, sky);
+        reflection = mix(result, skyRefl, smoothstep(0.3, 0.85, sky));
 #endif
 #if WATER_REFLECTIONS == 2 && SSR_STEPS > 0
         // Fixed ray offset: a per-pixel one only sparkles without temporal filtering.
