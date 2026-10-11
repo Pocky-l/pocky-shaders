@@ -71,15 +71,22 @@ void main() {
     if (color.a < 0.01) {
         discard;
     }
-    // Lit like the world around it, so rain curtains darken with a storm instead of glowing in it; streaks catch
-    // light from the whole sky and show a little brighter than the air behind them.
+    // Lit like the world around it, so rain curtains darken with a storm instead of glowing in it. A raindrop is a
+    // clear lens: it gathers the light of the whole sky and shows brighter than the air behind it - lit like a
+    // matte surface (ambient x1.25) the streaks came out darker than the sky and read as dark scratches. Snowflakes
+    // are matte and keep the plain sky light.
+    float rainy = 1.0 - snowWeather;
     #ifdef DIM_OVERWORLD
-    vec3 light = (ambientLightColor() * 1.25 + directLightColor() * 0.2) / PI * lightmap.y * lightmap.y;
+    vec3 light = (ambientLightColor() * (1.25 + 1.15 * rainy) + directLightColor() * (0.2 + 0.25 * rainy)) / PI
+            * lightmap.y * lightmap.y;
     #else
     vec3 light = vec3(0.3) * lightmap.y;
     #endif
     light += vec3(1.0, 0.7, 0.45) * lightmap.x * lightmap.x * 0.5 + vec3(AMBIENT_MIN);
-    outColor = vec4(srgbToLinear(color.rgb) * light, color.a * 0.8);
+    // Clear water: the grey-blue of the rain texture half taken out, so a drop shows the light, not a tint.
+    vec3 albedo = srgbToLinear(color.rgb);
+    albedo = mix(albedo, vec3(luminance(albedo)), 0.5 * rainy);
+    outColor = vec4(albedo * light, color.a * 0.8);
 #elif defined PROG_BASIC
     outColor = vec4(srgbToLinear(vertexColor.rgb), vertexColor.a);
 #else
