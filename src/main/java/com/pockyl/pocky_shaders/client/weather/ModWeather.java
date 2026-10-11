@@ -21,7 +21,7 @@ import java.lang.reflect.Field;
  * <pre>
  * 0  petrichor present, rain 0..1, rain level 0..1 (drizzle .. thunderstorm), sunshine (sun shower)
  * 1  wetness, rainbow strength, rainbow side (1 east, -1 west), lightning flash
- * 2  gust factor of the rain, sky view, -, -
+ * 2  gust factor of the rain, sky view, Petrichor marks its puddles for the pack (1), -
  * 3  hoarfrost present, snow 0..1, snow streaming in the wind 0..1 (blizzards), visibility (blocks)
  * 4  snow density, accumulation, gust factor, -
  * 5  wind present, direction x, direction z, speed (blocks per tick)
@@ -75,6 +75,7 @@ final class ModWeather {
                 out[7] = petrichor.flash(partialTick);
                 out[8] = rain > 0.001F ? petrichor.intensity() / rain : 1.0F;
                 out[9] = petrichor.skyView(partialTick);
+                out[10] = petrichor.marksPuddles() ? 1.0F : 0.0F;
                 rainWindX = petrichor.windX();
                 rainWindZ = petrichor.windZ();
             } catch (Throwable e) {
@@ -230,6 +231,8 @@ final class ModWeather {
         private MethodHandle skyView;
         private MethodHandle rainbow;
         private MethodHandle rainbowSide;
+        /** Petrichor 1.3.2+ tags its puddles with their own render type, older versions as plain water. */
+        private boolean marksPuddles;
 
         private Petrichor(boolean found) {
             super("petrichor", found);
@@ -255,10 +258,20 @@ final class ModWeather {
                 source.skyView = staticFloatOfTick(client, "skyView");
                 source.rainbow = staticFloat(bow, "strength");
                 source.rainbowSide = getter(bow, "sunSide");
+                try {
+                    load("com.pockyl.petrichor.client.compat.ShaderPacks").getField("PUDDLE_RENDER_TYPE");
+                    source.marksPuddles = true;
+                } catch (ReflectiveOperationException e) {
+                    // An older Petrichor: the pack tells its puddles by the ground right under the water.
+                }
             } catch (Throwable e) {
                 source.fail(e);
             }
             return source;
+        }
+
+        boolean marksPuddles() {
+            return marksPuddles;
         }
 
         float rain() throws Throwable {

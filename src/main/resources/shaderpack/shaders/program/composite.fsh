@@ -144,23 +144,25 @@ const vec3 WATER_DARK_LIGHT = vec3(0.011, 0.013, 0.015);
 vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float normalSpread) {
     vec3 worldNormal = decodeWaterNormal(waterData.xy);
     float runningFoam = decodeWaterFoam(waterData.xy);
-    // Streams and waterfalls store foam above 0.1 (still water at most 1/15 for its texture sheen).
-    bool running = runningFoam > 0.1;
+    // Stored foam in fifteenths: still water 0..1 (its texture sheen), 2 a tagged Petrichor puddle, streams and
+    // waterfalls 3 and more.
+    float foamCode = floor(runningFoam * 15.0 + 0.5);
+    bool running = foamCode > 2.5;
     vec4 tintSky = unpackWater(waterData.z);
     vec3 tint = tintSky.rgb;
     float sky = tintSky.a;
     vec3 viewNormal = mat3(gbufferModelView) * worldNormal;
     vec3 viewDir = normalize(surfaceView);
     vec3 surfacePlayer = mat3(gbufferModelViewInverse) * surfaceView;
-    // Rain puddles (Petrichor draws them as water a hair above the ground; real water is at least 0.89 blocks deep):
-    // still water with rings from the drops instead of waves, no caustics or foam.
-    bool puddle = false;
-    // Only the top of the water, with the ground just under it: on a waterfall seen from below the wall behind lies
-    // higher than the water, and the falling water turned into a flat mirror.
-    if (isEyeInWater == 0 && worldNormal.y > 0.5 && !isOpaqueSkyAt(uv)) {
+    // Rain puddles (Petrichor draws them as water a hair above the ground): still water with rings from the drops
+    // instead of waves, no caustics or foam. Petrichor 1.3.2+ tags them; with an older one they are told by the ground
+    // just under the top of the water (real water is at least 0.89 blocks deep), which took a waterfall seen from below
+    // for one before the test was limited to tops.
+    bool puddle = isEyeInWater == 0 && abs(foamCode - 2.0) < 0.5;
+    if (!petrichorMarksPuddles() && isEyeInWater == 0 && worldNormal.y > 0.5 && !isOpaqueSkyAt(uv)) {
         vec3 groundBelow = mat3(gbufferModelViewInverse) * viewPosition(uv, true);
         float film = surfacePlayer.y - groundBelow.y;
-        puddle = film > -0.05 && film < 0.25;
+        puddle = puddle || film > -0.05 && film < 0.25;
     }
     if (puddle) {
         worldNormal = puddleNormal((surfacePlayer + cameraPosition).xz, length(surfacePlayer), sky);
@@ -372,7 +374,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         // Streaks are water stirred up, a little of its colour in them, not white paint (a low sun made them beige).
         vec3 tintColor = srgbToLinear(tint);
         foamLight *= mix(vec3(1.0), tintColor / max(max(tintColor.r, max(tintColor.g, tintColor.b)), 1e-3), 0.3);
-        float foam = running && !falling ? max(runningFoam - 2.0 / 15.0, 0.0) : runningFoam;
+        float foam = running && !falling ? max(runningFoam - 3.0 / 15.0, 0.0) : runningFoam;
         result = mix(result, foamLight * 0.85, foam * 0.75);
     }
 

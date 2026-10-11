@@ -22,6 +22,7 @@ in vec4 vertexColor;
 in vec3 playerPos;
 in vec3 worldNormal;
 flat in int blockId;
+flat in int puddleTag;
 
 /* RENDERTARGETS: 3,4 */
 layout(location = 0) out vec4 outTranslucent;
@@ -67,11 +68,15 @@ void main() {
         }
         float foam = 0.0;
         if (running) {
-            // The 2/15 of a flowing top only tags it as running (composite takes it off before drawing foam).
-            foam = side ? 0.3 + 0.55 * streak : 2.0 / 15.0 + 0.3 * streak;
+            // The 3/15 of a flowing top only tags it as running (composite takes it off before drawing foam).
+            foam = side ? 0.3 + 0.55 * streak : 3.0 / 15.0 + 0.3 * streak;
         } else {
             // At most 1/15 once stored: running water always stores more (composite tells them apart by it).
             foam = streak * 0.06 * (1.0 - smoothstep(16.0, 48.0, dist));
+        }
+        if (puddleTag == 1) {
+            // Exactly 2/15 marks a Petrichor puddle (composite: 0..1 still water, 2 puddle, 3+ running).
+            foam = 2.0 / 15.0;
         }
         outTranslucent = vec4(0.0);
         outWater = vec4(encodeWaterNormal(wn, foam), packWater(vertexColor.rgb, lightmap.y), 1.0);

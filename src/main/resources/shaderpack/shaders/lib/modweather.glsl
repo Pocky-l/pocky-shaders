@@ -45,6 +45,11 @@ float rainHeaviness() {
     return level < 1.0 ? mix(0.55, 1.0, level) : (level < 2.0 ? mix(1.0, 1.6, level - 1.0) : mix(1.6, 1.4, level - 2.0));
 }
 
+// Whether Petrichor tags its puddles (mc_Entity.y == 2 on its water cells), so they need not be guessed.
+bool petrichorMarksPuddles() {
+    return petrichorLinked() && modTexel(2).z > 0.5;
+}
+
 // Gusts of the rain right now (1 = steady): heavier and lighter sheets sweep past.
 float rainGust() {
     return petrichorLinked() ? modTexel(2).x : 1.0;
