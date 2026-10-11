@@ -90,14 +90,17 @@ float exposure() {
 #endif
     // Away from the sky (caves, deep inside buildings) the eye adapts to the dark as well; the Brightness option sets
     // how far.
-    float cave = mix(1.5, 2.8, screenBrightness);
+    // Not too far: lit rock next to a torch or lava stayed washed out, the dark had no depth.
+    float cave = mix(1.2, 2.2, screenBrightness);
     return EXPOSURE * mix(cave, outdoor, eyeSky);
 }
 
 void main() {
     vec3 color = texture(colortex0, texcoord).rgb;
 #ifdef BLOOM
-    float amount = (0.025 + rainStrength * 0.03 + float(isEyeInWater == 1) * 0.08) * BLOOM_STRENGTH;
+    // Underground lights glow into the dark air around them.
+    float underground = 1.0 - smoothstep(0.0, 0.6, float(eyeBrightnessSmooth.y) / 240.0);
+    float amount = (0.025 + rainStrength * 0.03 + float(isEyeInWater == 1) * 0.08 + underground * 0.035) * BLOOM_STRENGTH;
     color = mix(color, bloom(texcoord), amount);
 #endif
     color *= exposure();

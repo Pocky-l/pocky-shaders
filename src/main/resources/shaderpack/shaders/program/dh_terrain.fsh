@@ -98,7 +98,7 @@ void main() {
     s.material = leaves ? MAT_LEAVES : MAT_DEFAULT;
     vec3 lit = shade(s, frameLights(), 0.5);
     if (dhMaterial == DH_BLOCK_ILLUMINATED || dhMaterial == DH_BLOCK_LAVA) {
-        lit += emission(albedo, 6.0, true) * 0.8;
+        lit += emission(albedo, 3.0, true) * 0.8;
     }
     outColor = vec4(lit, 1.0);
     float encoded = (float(s.material) * 256.0 + floor(lm.y * 255.0 + 0.5)) / 65535.0;

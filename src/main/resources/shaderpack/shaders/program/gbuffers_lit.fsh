@@ -99,7 +99,7 @@ void main() {
     s.material = material;
 
     vec3 lit = shade(s, frameLights(), dither(gl_FragCoord.xy));
-    lit += emission(s.albedo, 6.0, material == MAT_EMISSIVE) * emissive;
+    lit += emission(s.albedo, 3.0, material == MAT_EMISSIVE) * emissive;
 
     outColor = vec4(lit, color.a);
     vec3 viewNormal = mat3(gbufferModelView) * n;

@@ -27,8 +27,16 @@ Lights frameLights() {
     return l;
 }
 
+// Firelight: warm amber (torches, lava and lanterns all burn warm in the game).
 vec3 blockLightColor() {
-    return mix(vec3(1.0, 0.86, 0.72), vec3(1.0, 0.58, 0.26), 0.55 * BLOCK_LIGHT_WARMTH);
+    return mix(vec3(1.0, 0.86, 0.72), vec3(1.0, 0.55, 0.22), 0.7 * BLOCK_LIGHT_WARMTH);
+}
+
+// Firelight is never quite steady: a slow, gentle waver that drifts across the walls (a few blocks across, so
+// neighbouring torches do not pulse in step).
+float blockLightFlicker(vec3 worldPos) {
+    float t = frameTimeCounter;
+    return 1.0 + 0.07 * (valueNoise(worldPos.xz * 0.3 + worldPos.y * 0.17 + vec2(t * 2.3, -t * 1.7)) - 0.5);
 }
 
 // Torches and lamps light the blocks next to them about as brightly as vanilla does (2.2 here, with the dark-adapted
@@ -126,11 +134,15 @@ vec3 shade(Surface s, Lights lights, float noise) {
     ambient += lights.direct * saturate(l.y) * 0.15 * vec3(0.95, 1.0, 0.85) * groundView / PI * skyFalloff;
 
     ambient += vec3(AMBIENT_MIN) * vec3(0.8, 0.9, 1.1) * brightnessLift() + nightVision * vec3(0.25);
+    // Deep in caves a faint cool fill keeps the shapes of the rock readable in the dark (vanilla's dark is never
+    // pitch black either); the warm firelight stands out against it.
+    ambient += vec3(0.55, 0.7, 1.0) * 0.02 * brightnessLift() * (1.0 - smoothstep(0.0, 0.5, sky));
 
     // The Brightness option also lifts weak block light the way vanilla's gamma does, so torches reach farther into
     // the dark at higher settings (1 - (1 - x)^3 at most halfway).
     float blockLevel = mix(s.lightmap.x, 1.0 - pow(1.0 - s.lightmap.x, 3.0), 0.5 * screenBrightness);
-    vec3 block = blockLightColor() * (blockLightCurve(blockLevel) + handLight(s.playerPos));
+    vec3 block = blockLightColor() * (blockLightCurve(blockLevel) + handLight(s.playerPos))
+            * blockLightFlicker(s.playerPos + cameraPosition);
 
     vec3 direct = vec3(0.0);
     vec3 sheen = vec3(0.0);
@@ -215,8 +227,10 @@ vec3 shade(Surface s, Lights lights, float noise) {
 
 // Glow of light-emitting blocks. Known light blocks glow over most of their texture; any other light source (a modded
 // one, a furnace) only in its brightest texels, so the stone of a lit furnace does not glow with its fire.
+// The glow keeps a deeper, richer colour than the texture (lava a glowing orange, not a pale salmon once it is bright).
 vec3 emission(vec3 albedo, float strength, bool wholeBlock) {
     float m = max(albedo.r, max(albedo.g, albedo.b));
     float mask = wholeBlock ? smoothstep(0.08, 0.7, m) : smoothstep(0.4, 0.85, m);
-    return albedo * mask * strength;
+    vec3 rich = pow(albedo / max(m, 1e-4), vec3(1.5)) * m;
+    return rich * mask * strength;
 }
