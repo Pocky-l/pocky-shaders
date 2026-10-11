@@ -174,7 +174,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     if ((puddle || !running && worldNormal.y > 0.5) && isEyeInWater == 0) {
         float ringFade = rainRingFade(length(surfacePlayer), sky);
         if (ringFade > 0.0) {
-            vec3 rings = rainRings((surfacePlayer + cameraPosition).xz, ringFade) * vec3(1.8, 1.8, 1.0);
+            vec3 rings = rainRings((surfacePlayer + cameraPosition).xz, ringFade);
             worldNormal = normalize(worldNormal + vec3(-rings.x, 0.0, -rings.y));
             ringGlow = saturate(rings.z);
         }
@@ -412,11 +412,11 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #endif
     if (ringGlow > 0.0) {
 #ifdef DIM_OVERWORLD
-        vec3 ringLight = (ambientLightColor() * 1.4 + directLightColor() * 0.3) / PI * sky;
+        vec3 ringLight = (ambientLightColor() + directLightColor() * 0.2) / PI * sky;
 #else
         vec3 ringLight = vec3(0.05);
 #endif
-        result = mix(result, vanillaLightResponse(ringLight), ringGlow * 0.45);
+        result = mix(result, vanillaLightResponse(ringLight), ringGlow * 0.18);
     }
     return result;
 }

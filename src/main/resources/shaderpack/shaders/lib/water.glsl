@@ -15,12 +15,15 @@ float waterHeight(vec2 p, float detail) {
     return h;
 }
 
-// Rings spreading from rain drops on a still puddle (the same pattern as Petrichor's own puddle shader). One drop per
-// half-block cell and cycle, a share of the cells active by how hard it rains; each drop leaves a small dimple and a
-// ring that widens to about half a block with a couple of crests, fading as it grows. Returns the surface slope (xy)
-// and how much light the crests and the splash catch (z).
+// Rings spreading from rain drops on still water, drawn in the game's pixels: 16 to a block like the textures, each
+// ring one pixel wide and growing a pixel at a time like an animated sprite (smooth, thin rings looked like a modern
+// render, not Minecraft). One drop per half-block cell and cycle, a share of the cells active by how hard it rains;
+// the ring widens to about half a block and fades as it grows, after a brief splash pixel. Returns the surface slope
+// (xy) and how much light the ring catches (z).
 vec3 rainRipples(vec2 p, float time, float amount) {
     const float CELL = 0.5;
+    const float PX = 1.0 / 16.0;
+    p = (floor(p / PX) + 0.5) * PX;
     vec2 q = p / CELL;
     vec2 cell = floor(q);
     vec2 slope = vec2(0.0);
@@ -37,20 +40,16 @@ vec3 rainRipples(vec2 p, float time, float amount) {
             }
             vec2 center = c + 0.15 + 0.7 * vec2(hash12(c + vec2(mod(cycle, 53.0) * 0.37, 5.0)),
                     hash12(c + vec2(9.0, mod(cycle, 47.0) * 0.53)));
+            // The drop lands on a pixel centre, so its rings are the same pixel circles every time.
+            center = (floor(center * CELL / PX) + 0.5) * PX / CELL;
             vec2 d = (q - center) * CELL;
             float dist = length(d);
-            float s0 = dist - age * 0.6;
-            const float WIDTH = 0.045;
-            const float K = 6.2832 / 0.05;
-            float bell = exp(-s0 * s0 / (WIDTH * WIDTH));
-            float dh = bell * (-2.0 * s0 / (WIDTH * WIDTH) * cos(K * s0) - K * sin(K * s0));
+            float radius = floor(age * 9.0 + 1.0) * PX;
+            float ring = abs(dist - radius) < 0.5 * PX ? 1.0 : 0.0;
             float fade = (1.0 - age) * (1.0 - age);
-            float dimple = exp(-dist * dist / 0.0016) * (1.0 - smoothstep(0.0, 0.12, age)) * -2.0 * dist / 0.0016;
-            slope += (dh * 0.0045 * fade + dimple * 0.004) * d / (dist + 1e-4);
-            // The crest as a thin bright line, the splash as a short-lived spot.
-            float crest = exp(-s0 * s0 / (0.022 * 0.022));
-            float splash = exp(-dist * dist / 0.0025) * (1.0 - smoothstep(0.0, 0.15, age));
-            glow += crest * fade + splash * 0.8;
+            float splash = dist < 0.5 * PX && age < 0.12 ? 1.0 : 0.0;
+            slope += ring * fade * 0.08 * d / (dist + 1e-4);
+            glow += ring * fade + splash * 0.6;
         }
     }
     return vec3(slope, glow);
