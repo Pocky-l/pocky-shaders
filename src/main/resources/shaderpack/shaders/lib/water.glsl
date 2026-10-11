@@ -50,15 +50,31 @@ vec2 rainRipples(vec2 p, float time, float amount) {
     return slope;
 }
 
+// How much of the rain lands on an open water surface at this distance and sky light (0 = none, rings off).
+float rainRingFade(float dist, float skyLight) {
+    return rainStrength * (1.0 - snowWeather) * smoothstep(0.7, 0.95, skyLight) * (1.0 - smoothstep(16.0, 48.0, dist));
+}
+
+// Slope of the rain rings on water: one drop per half-block cell and cycle at full rain, and in a downpour or a storm
+// a second, offset layer of drops in between - a heavy rain covers the water with rings.
+vec2 rainRings(vec2 worldXZ, float fade) {
+    float heavy = saturate((rainHeaviness() - 0.6) * 0.8 + thunderStrength * 0.6);
+    float amount = saturate(rainStrength * (0.75 + 0.35 * heavy));
+    vec2 slope = rainRipples(worldXZ, frameTimeCounter, amount);
+    if (heavy > 0.0) {
+        slope += rainRipples(worldXZ + vec2(0.25, 0.37), frameTimeCounter * 1.13 + 3.1, amount * heavy);
+    }
+    return slope * fade;
+}
+
 // Normal of a rain puddle: still water, with rings from the drops where rain reaches it. Rings smaller than a pixel
 // only shimmer, so they fade out in the distance.
 vec3 puddleNormal(vec2 worldXZ, float dist, float skyLight) {
-    float near = rainStrength * smoothstep(0.7, 0.95, skyLight) * (1.0 - smoothstep(12.0, 40.0, dist));
-    if (near <= 0.0) {
+    float fade = rainRingFade(dist, skyLight);
+    if (fade <= 0.0) {
         return vec3(0.0, 1.0, 0.0);
     }
-    float amount = saturate((rainStrength * 0.75 + thunderStrength * 0.25) * min(rainHeaviness(), 1.3));
-    vec2 slope = rainRipples(worldXZ, frameTimeCounter, amount) * near;
+    vec2 slope = rainRings(worldXZ, fade);
     return normalize(vec3(-slope.x, 1.0, -slope.y));
 }
 

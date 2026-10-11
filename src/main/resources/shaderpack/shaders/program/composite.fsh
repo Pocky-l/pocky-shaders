@@ -167,6 +167,14 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     if (puddle) {
         worldNormal = puddleNormal((surfacePlayer + cameraPosition).xz, length(surfacePlayer), sky);
         viewNormal = mat3(gbufferModelView) * worldNormal;
+    } else if (!running && isEyeInWater == 0 && worldNormal.y > 0.5) {
+        // Rain on lakes, rivers and the sea: the same rings from the drops over the waves, many of them in a downpour.
+        float rings = rainRingFade(length(surfacePlayer), sky);
+        if (rings > 0.0) {
+            vec2 slope = rainRings((surfacePlayer + cameraPosition).xz, rings) * 1.3;
+            worldNormal = normalize(worldNormal + vec3(-slope.x, 0.0, -slope.y));
+            viewNormal = mat3(gbufferModelView) * worldNormal;
+        }
     }
 
     // The face's own normal without the waves: up or down for the surface (seen from below it faces down), the
