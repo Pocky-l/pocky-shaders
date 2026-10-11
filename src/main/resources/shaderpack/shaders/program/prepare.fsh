@@ -43,7 +43,7 @@ void main() {
     if (pixel.y == 0 && pixel.x < 3) {
         vec3 value;
         if (pixel.x == PIXEL_LIGHT_COLOR.x) {
-            vec3 sun = SUN_ILLUMINANCE * adaptedTint(directTransmittance(sunDir.y)) * aboveHorizon(sunDir.y);
+            vec3 sun = SUN_ILLUMINANCE * sunTint(directTransmittance(sunDir.y), sunDir.y) * aboveHorizon(sunDir.y);
             // The low morning sun lights the land with a touch of rose (same luminance).
             vec3 rose = vec3(1.08, 0.9, 0.98);
             sun *= mix(vec3(1.0), rose / luminance(rose), morning() * twilightAmount(sunDir.y) * 0.6);
@@ -59,7 +59,7 @@ void main() {
             float night = smoothstep(0.05, -0.1, sunDir.y);
             value = max(sky, vec3(0.05, 0.06, 0.08) * (1.0 + rainStrength * 0.6 * night));
         } else {
-            value = SUN_ILLUMINANCE * adaptedTint(directTransmittance(sunDir.y)) * (1.0 - rainStrength)
+            value = SUN_ILLUMINANCE * sunTint(directTransmittance(sunDir.y), sunDir.y) * (1.0 - rainStrength)
                     * (1.0 - thunderStrength);
         }
         outSky = vec4(value, 1.0);

@@ -24,6 +24,55 @@ float rainSheets(vec3 dir, float dist) {
     return mix(1.0, 0.45 + 1.3 * n, strength);
 }
 
+#ifdef DIM_OVERWORLD
+// Ground mist: banks of low cloud come down onto the land - a layer from below sea level up to 6..18 blocks above it
+// that fills the water, rivers, swamps and low land while hills rise out of it. Broad banks with clear gaps between
+// them, a soft lumpy top and finer wisps, drifting slowly with the wind.
+const float MIST_BOTTOM = 52.0;
+const float MIST_BASE = 62.0;
+const float MIST_THICKNESS = 16.0;
+const float MIST_RANGE = 1024.0;
+
+float mistDensity(vec3 worldPos) {
+    vec2 p = worldPos.xz + frameTimeCounter * vec2(0.35, 0.12);
+    float banks = valueNoise(p / 170.0) * 0.65 + valueNoise(p / 61.0 + 17.0) * 0.35;
+    float wisps = valueNoise(p / 19.0 + 41.0);
+    // Swamps and rivers (mistBiome) are covered almost everywhere.
+    float cover = smoothstep(0.4 - 0.3 * mistBiome, 0.72 - 0.2 * mistBiome, banks);
+    float top = MIST_BASE + MIST_THICKNESS * (0.25 + 0.75 * banks) + (wisps - 0.5) * 4.0;
+    return cover * smoothstep(top, top - 6.0, worldPos.y) * (0.65 + 0.35 * wisps);
+}
+
+// Optical depth of the ground mist along a view ray: a few samples over the part of the ray inside the mist layer,
+// closer together near the camera. It starts some way out, so it lies in the distance rather than on the screen.
+float groundMist(vec3 dir, float dist) {
+    const float top = MIST_BASE + MIST_THICKNESS + 2.0;
+    float tNear = 0.0;
+    float tFar = min(dist, MIST_RANGE);
+    if (abs(dir.y) > 1e-4) {
+        float t1 = (MIST_BOTTOM - cameraPosition.y) / dir.y;
+        float t2 = (top - cameraPosition.y) / dir.y;
+        tNear = max(tNear, min(t1, t2));
+        tFar = min(tFar, max(t1, t2));
+    } else if (cameraPosition.y < MIST_BOTTOM || cameraPosition.y > top) {
+        return 0.0;
+    }
+    if (tFar <= tNear) {
+        return 0.0;
+    }
+    float depth = 0.0;
+    float prev = tNear;
+    for (int i = 1; i <= MIST_STEPS; i++) {
+        float f = float(i) / float(MIST_STEPS);
+        float t = mix(tNear, tFar, f * f);
+        float mid = (prev + t) * 0.5;
+        depth += mistDensity(cameraPosition + dir * mid) * (t - prev) * smoothstep(16.0, 80.0, mid);
+        prev = t;
+    }
+    return depth * 0.012;
+}
+#endif
+
 // Fog for a surface at playerPos (relative to the camera). Returns the scene colour with fog applied.
 vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     float dist = length(playerPos);
@@ -63,32 +112,27 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     float heightTerm = exp(-max(y0, -40.0) * falloff) * (abs(dy) > 1e-3 ? (1.0 - exp(-dy)) / dy : 1.0);
     float amount = 1.0 - exp(-fogOpticalDepth(dist, rainSheets(dir, dist)) * clamp(heightTerm, 0.02, 4.0));
 
-    // Low haze: moist air settling over water and in low land. Its density falls off quickly above sea level, so it
-    // fills the sea and the valleys between hills while peaks rise out of it, and it builds up with distance (the
-    // optical depth along the ray is integrated exactly, like the height fog above). Slow, broad banks keep it from
-    // looking like a flat overlay; it is lit like the air around it, glowing towards the sun.
+    // Ground mist (see groundMist) and a thin veil of air lying on the land and water, both gone in rain (rain fog
+    // takes over: the layers would only stack into milk).
     float hazeAmount = 0.0;
+    float mistAmount = 0.0;
     if (LOW_HAZE > 0.0) {
-        const float HAZE_BASE = 62.0;
-        const float HAZE_FALLOFF = 0.045;
-        float hy0 = cameraPosition.y - HAZE_BASE;
-        float hdy = playerPos.y * HAZE_FALLOFF;
-        float hazeHeight = exp(-max(hy0, -16.0) * HAZE_FALLOFF) * (abs(hdy) > 1e-3 ? (1.0 - exp(-hdy)) / hdy : 1.0);
         vec2 mid = cameraPosition.xz + playerPos.xz * 0.5;
         float banks = 0.7 + 0.6 * valueNoise(mid / 220.0 + frameTimeCounter * vec2(0.004, 0.002));
-        // A touch thicker in the cool morning and evening air, thinner around noon.
-        float humidity = mix(1.25, 0.85, smoothstep(0.15, 0.6, sunDir.y));
-        // Rain fog takes over in rain: the layers would only stack into milk.
-        float weather = LOW_HAZE * banks * humidity * (1.0 - rainStrength);
-        float seaHaze = dist * 0.0018 * weather * clamp(hazeHeight, 0.0, 6.0);
-        // Surface haze: a thin layer of air lying on the land and water wherever they are (hills included). A ray
-        // crosses about SURFACE_LAYER / |dir.y| blocks of it before reaching the surface, so it gathers on far
-        // ground and water seen at a shallow angle, and stays thin right around the player and looking down from
-        // high up - land and sea fade into a soft veil with distance, the hills stand out against it.
+        float weather = LOW_HAZE * (1.0 - rainStrength);
+        float sheltered = smoothstep(0.05, 0.6, eyeSky);
+        // Surface haze: a ray crosses about SURFACE_LAYER / |dir.y| blocks of it before reaching the surface, so it
+        // gathers on far ground and water seen at a shallow angle and stays thin right around the player and looking
+        // down from high up - the hills stand out against it.
         const float SURFACE_LAYER = 12.0;
         float layerPath = min(dist, SURFACE_LAYER / max(abs(dir.y), 0.01));
-        float surfaceHaze = layerPath * 0.0012 * weather * smoothstep(16.0, 160.0, dist);
-        hazeAmount = (1.0 - exp(-(seaHaze + surfaceHaze))) * smoothstep(0.05, 0.6, eyeSky);
+        float surfaceHaze = layerPath * 0.0008 * weather * banks * smoothstep(16.0, 160.0, dist);
+        hazeAmount = (1.0 - exp(-surfaceHaze)) * sheltered;
+        // Thickest in the cool morning and evening air, thinnest around noon; swamps and rivers are always misty.
+        float humidity = mix(1.3, 0.55, smoothstep(0.15, 0.6, sunDir.y)) * (1.0 + 0.8 * mistBiome) * (1.0 - 0.6 * snowWeather);
+        float mistDepth = groundMist(dir, dist) * weather * humidity;
+        // Never a solid wall: the land shows through even the thickest bank.
+        mistAmount = (1.0 - exp(-mistDepth)) * 0.8 * sheltered;
     }
 
 #ifdef VALLEY_MIST
@@ -126,6 +170,15 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     // Hide the edge of the loaded world.
     float border = smoothstep(renderDistance * 0.72, renderDistance, dist);
     amount = max(amount, border);
+    if (mistAmount > 0.0) {
+        // Lit like a cloud: the whole sky and the sun, glowing where the sun shines through it (orange and pink at
+        // sunset, silver under the moon).
+        float mu = dot(dir, lightDirection());
+        vec3 sunLight = directLightColor();
+        sunLight = mix(vec3(luminance(sunLight)), sunLight, 0.7);
+        vec3 mistCol = (ambientLightColor() * 0.9 + sunLight * (0.3 + miePhase(mu, 0.55))) / PI * 0.75;
+        color = mix(color, mistCol, mistAmount * (1.0 - saturate(amount)));
+    }
     if (hazeAmount > 0.0) {
         float mu = dot(dir, lightDirection());
         vec3 hazeLight = directLightColor();

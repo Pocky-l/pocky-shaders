@@ -199,8 +199,15 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         vec3 mirrored = light * vec3(0.05, 0.22, 0.26) * 1.4 + vec3(0.002, 0.006, 0.008);
         result = mix(mirrored, below * 0.9, through);
     } else {
-        // Absorption (reds go first) and in-scattered light colour the water with depth.
-        vec3 absorb = (vec3(0.40, 0.11, 0.08) + (1.0 - tint) * 0.12) / WATER_CLARITY;
+        // How far out at sea: the floor drops away from the shore, so the depth under the surface tells (open ocean is
+        // 15..30 blocks deep). Water over the far end of the world (no floor seen) counts as open sea.
+        float sea = floorIsSky ? 1.0 : smoothstep(3.0, 28.0, depthBelow);
+        if (puddle) {
+            sea = 0.0;
+        }
+        // Absorption (reds go first) and in-scattered light colour the water with depth; out at sea the bottom fades
+        // away sooner.
+        vec3 absorb = (vec3(0.40, 0.11, 0.08) + (1.0 - tint) * 0.12) / WATER_CLARITY * (1.0 + 1.5 * sea);
         vec3 transmit = exp(-absorb * waterDist);
 #ifdef DIM_OVERWORLD
         vec3 light = (ambientLightColor() * 0.6 + directLightColor() * 0.15) / PI * sky * sky;
@@ -211,7 +218,9 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         // Shallows glow turquoise over the bottom, open deep water turns a darker, richer blue.
         vec3 shallowScatter = mix(vec3(0.05, 0.22, 0.26), tint * vec3(0.3, 0.5, 0.55), 0.5);
         vec3 deepScatter = mix(vec3(0.02, 0.10, 0.22), tint * vec3(0.15, 0.3, 0.5), 0.5);
-        vec3 scatterColor = light * mix(shallowScatter, deepScatter, smoothstep(3.0, 18.0, waterDist));
+        // Open sea: a dark, deep marine blue.
+        vec3 seaScatter = deepScatter * vec3(0.4, 0.55, 0.6);
+        vec3 scatterColor = light * mix(mix(shallowScatter, deepScatter, smoothstep(3.0, 18.0, waterDist)), seaScatter, sea);
         // Churned storm water turns slate grey-green.
         scatterColor = mix(scatterColor, vec3(luminance(scatterColor)) * vec3(0.8, 1.0, 1.0), 0.5 * thunderStrength);
         result = below * transmit + scatterColor * (1.0 - exp(-waterDist * 0.4 / WATER_CLARITY));

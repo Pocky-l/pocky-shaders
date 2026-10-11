@@ -30,8 +30,10 @@ vec3 blockLightColor() {
     return mix(vec3(1.0, 0.86, 0.72), vec3(1.0, 0.58, 0.26), 0.55 * BLOCK_LIGHT_WARMTH);
 }
 
+// Torches and lamps light the blocks next to them about as brightly as vanilla does (2.2 here, with the dark-adapted
+// exposure in caves, made every torch a floodlight).
 float blockLightCurve(float level) {
-    return level * level * level * 2.2 + level * 0.06;
+    return level * level * level * 0.8 + level * 0.04;
 }
 
 float fresnelSchlick(float cosTheta, float f0) {
@@ -158,9 +160,12 @@ vec3 shade(Surface s, Lights lights, float noise) {
         vec3 visibility = vec3(1.0);
 #ifdef SHADOWS
 #ifdef SHADOW_LOOKUP
-        visibility = shadowVisibility(s.playerPos, s.normal, noise, foliage);
+        bool pixelLock = !foliage && s.material != MAT_ENTITY && s.material != MAT_HAND && s.material != MAT_PARTICLE;
+        visibility = shadowVisibility(s.playerPos, s.normal, noise, foliage, pixelLock);
 #endif
 #endif
+        // Shade is never black: a little of the sun reaches it, like the soft, light shade of the vanilla look.
+        visibility = mix(vec3(SHADOW_LIGHT), vec3(1.0), visibility);
 #if defined CLOUD_LOOKUP && CLOUDS > 0
         visibility *= cloudShadow(s.playerPos, l);
 #endif

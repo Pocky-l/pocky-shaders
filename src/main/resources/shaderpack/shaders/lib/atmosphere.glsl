@@ -66,10 +66,16 @@ vec3 directTransmittance(float cosZenith) {
 
 // The eye adapts to the colour of the light it is in: a low sun looks golden rather than deep red, a midday sun
 // close to white. Softens the hue of a transmittance, keeps its luminance.
-vec3 adaptedTint(vec3 transmittance) {
+vec3 adaptedTint(vec3 transmittance, float exponent) {
     float m = max(max(transmittance.r, transmittance.g), max(transmittance.b, 1e-6));
-    vec3 c = pow(transmittance / m, vec3(0.6));
+    vec3 c = pow(transmittance / m, vec3(exponent));
     return c * (luminance(transmittance) / max(luminance(c), 1e-6));
+}
+
+// The sun's light and disc: softened by day, but the last few degrees above the horizon keep a real orange (softened
+// all the way down, the setting sun lit the land a pale lemon yellow).
+vec3 sunTint(vec3 transmittance, float sunY) {
+    return adaptedTint(transmittance, mix(0.6, 0.9, smoothstep(0.3, 0.05, sunY)));
 }
 
 // Share of a light body's direct light while it is up. Zero at the horizon: Iris switches the shadow light between

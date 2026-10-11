@@ -25,8 +25,33 @@ vec2 vogelDisk(int index, int count, float phi) {
     return r * vec2(cos(theta), sin(theta));
 }
 
+// Tint of the light at a shadow map position from sample totals: solid = share past opaque casters (shadowtex1),
+// total = share past every caster (shadowtex0, translucent ones too).
+vec3 shadowTint(vec2 coord, float solid, float total) {
+#ifdef COLORED_SHADOWS
+    if (solid - total > 0.01) {
+        // Light passing through translucent blocks: shadowcolor0 holds their tint (already 1 where nothing is).
+        vec4 tint = texture(shadowcolor0, coord);
+        return mix(vec3(total), tint.rgb * solid, saturate((solid - total) / max(solid, 1e-3)));
+    }
+    return vec3(total);
+#else
+    return vec3(solid);
+#endif
+}
+
 // Sun/moon visibility (rgb: tinted by stained glass and water above). playerPos is relative to the camera.
-vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliage) {
+// pixelLock: the surface is a block face on the 1/16 texel grid (not an entity or a plant).
+vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliage, bool pixelLock) {
+    float dist = length(playerPos);
+#if SHADOW_STYLE == 1
+    // Pixel shadows, like the game's own textures: every 1/16-block texel of a block face is either lit or shaded.
+    // The lookup moves to the centre of the texel-sized cell just in front of the face.
+    if (pixelLock && dist < 96.0) {
+        vec3 world = playerPos + cameraPosition + worldNormal * (0.5 / 16.0);
+        playerPos = (floor(world * 16.0) + 0.5) / 16.0 - cameraPosition;
+    }
+#endif
     vec3 clip = projectAndDivide(shadowProjection, (shadowModelView * vec4(playerPos, 1.0)).xyz);
     float distort = shadowDistortFactor(clip.xy);
     float texelBlocks = 2.0 * shadowDistance / float(shadowMapResolution);
@@ -42,31 +67,72 @@ vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliag
     coord.z -= 0.00004 * distort;
     float edge = smoothstep(0.65, 0.95, max(abs(clip.x), abs(clip.y)));
 
+#if SHADOW_STYLE == 1
+    // Crisp edges: a single hardware-filtered lookup up close, where shadow texels are finer than block texels; four
+    // further out, so the coarser shadow texels do not show as stairs. Opaque casters are tested first and the
+    // translucent pass is read only where they let light through.
+    float solid;
+    float total;
+    if (dist < 48.0) {
+        solid = texture(shadowtex1, coord);
+        if (solid <= 0.0) {
+            return vec3(edge);
+        }
+#ifdef COLORED_SHADOWS
+        total = texture(shadowtex0, coord);
+#else
+        total = solid;
+#endif
+        // Sharpen the one-texel filter ramp into a cartoon edge.
+        solid = smoothstep(0.2, 0.8, solid);
+        total = smoothstep(0.2, 0.8, total);
+    } else {
+        float radius = 0.75 / float(shadowMapResolution);
+        solid = 0.0;
+        total = 0.0;
+        for (int i = 0; i < 4; i++) {
+            vec2 o = vec2((i & 1) == 0 ? -radius : radius, (i & 2) == 0 ? -radius : radius);
+            solid += texture(shadowtex1, vec3(coord.xy + o, coord.z));
+        }
+        solid *= 0.25;
+        if (solid <= 0.0) {
+            return vec3(edge);
+        }
+#ifdef COLORED_SHADOWS
+        for (int i = 0; i < 4; i++) {
+            vec2 o = vec2((i & 1) == 0 ? -radius : radius, (i & 2) == 0 ? -radius : radius);
+            total += texture(shadowtex0, vec3(coord.xy + o, coord.z));
+        }
+        total *= 0.25;
+#else
+        total = solid;
+#endif
+    }
+    return mix(shadowTint(coord.xy, solid, total), vec3(1.0), edge);
+#else
     float softness = (0.045 * SHADOW_SOFTNESS + 0.5 * texelBlocks) / (2.0 * shadowDistance) / distort;
     softness *= sunDirection().y < 0.0 ? 2.2 : 1.0;
     // A fixed sample pattern: per-pixel random rotation looked like grain without temporal filtering.
     float phi = 0.0;
+    int samples = dist > DETAIL_DISTANCE ? max(SHADOW_SAMPLES / 2, 2) : SHADOW_SAMPLES;
     float solid = 0.0;
-    float total = 0.0;
-    int samples = length(playerPos) > DETAIL_DISTANCE ? max(SHADOW_SAMPLES / 2, 2) : SHADOW_SAMPLES;
     for (int i = 0; i < samples; i++) {
-        vec3 p = vec3(coord.xy + vogelDisk(i, samples, phi) * softness, coord.z);
-        solid += texture(shadowtex1, p);
-#ifdef COLORED_SHADOWS
-        total += texture(shadowtex0, p);
-#endif
+        solid += texture(shadowtex1, vec3(coord.xy + vogelDisk(i, samples, phi) * softness, coord.z));
     }
     solid /= float(samples);
-#ifdef COLORED_SHADOWS
-    total /= float(samples);
-    if (solid - total > 0.01) {
-        // Light passing through translucent blocks: shadowcolor0 holds their tint (already 1 where nothing is).
-        vec4 tint = texture(shadowcolor0, coord.xy);
-        return mix(mix(vec3(total), tint.rgb * solid, saturate((solid - total) / max(solid, 1e-3))), vec3(1.0), edge);
+    if (solid <= 0.0) {
+        // Fully behind opaque casters: the translucent pass cannot add anything.
+        return vec3(edge);
     }
-    return vec3(mix(total, 1.0, edge));
-#else
-    return vec3(mix(solid, 1.0, edge));
+    float total = solid;
+#ifdef COLORED_SHADOWS
+    total = 0.0;
+    for (int i = 0; i < samples; i++) {
+        total += texture(shadowtex0, vec3(coord.xy + vogelDisk(i, samples, phi) * softness, coord.z));
+    }
+    total /= float(samples);
+#endif
+    return mix(shadowTint(coord.xy, solid, total), vec3(1.0), edge);
 #endif
 }
 

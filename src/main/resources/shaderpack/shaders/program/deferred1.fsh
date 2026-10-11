@@ -134,14 +134,16 @@ void main() {
         float farWeight = smoothstep(0.65, 0.95, max(abs(shadowClip.x), abs(shadowClip.y)));
         vec3 viewLight = normalize(shadowLightPosition);
         if (farWeight > 0.0 && material != MAT_HAND) {
-            float occluded = screenSpaceShadow(viewPos, viewLight, 0.5);
-            if (occluded > 0.0) {
-                vec3 n = decodeNormal(data.xy);
-                float skyLight = mod(encoded, 256.0) / 255.0;
-                float ambient = luminance(ambientLightColor()) * skyLight * skyLight * 0.85 + AMBIENT_MIN;
-                float direct = luminance(directLightColor()) * saturate(dot(n, viewLight)) * smoothstep(0.1, 0.45, skyLight);
-                float ambientShare = ambient / max(ambient + direct, 1e-4);
-                color *= mix(1.0, ambientShare, occluded * farWeight);
+            vec3 n = decodeNormal(data.xy);
+            float skyLight = mod(encoded, 256.0) / 255.0;
+            float ambient = luminance(ambientLightColor()) * skyLight * skyLight * 0.85 + AMBIENT_MIN;
+            float direct = luminance(directLightColor()) * saturate(dot(n, viewLight)) * smoothstep(0.1, 0.45, skyLight);
+            float ambientShare = ambient / max(ambient + direct, 1e-4);
+            // Faces turned away from the light have nothing to lose: no march for them.
+            if (ambientShare < 0.97) {
+                float occluded = screenSpaceShadow(viewPos, viewLight, 0.5);
+                // The shade keeps SHADOW_LIGHT of the sun, like the shadow map's.
+                color *= mix(1.0, ambientShare, occluded * farWeight * (1.0 - SHADOW_LIGHT));
             }
         }
 #endif

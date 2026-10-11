@@ -22,6 +22,8 @@ uniform float wetness;
 uniform float thunderStrength;
 // Custom uniform (shaders.properties): 1 while it snows at the camera instead of raining, eased over a few seconds.
 uniform float snowWeather;
+// 1 in swamps, 0.6 at rivers (custom uniform, shaders.properties): ground mist covers them.
+uniform float mistBiome;
 // Iris: a lightning bolt relative to the camera, w = 1 while one exists.
 uniform vec4 lightningBoltPosition;
 uniform float viewWidth;

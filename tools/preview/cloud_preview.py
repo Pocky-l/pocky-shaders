@@ -52,10 +52,10 @@ void main() {
     vec3 dir = normalize(forward + ndc.x * fov * (16.0 / 9.0) * right + ndc.y * fov * up);
 
     vec3 sunDir = previewSun;
-    vec3 direct = SUN_ILLUMINANCE * adaptedTint(directTransmittance(sunDir.y)) * aboveHorizon(sunDir.y)
+    vec3 direct = SUN_ILLUMINANCE * sunTint(directTransmittance(sunDir.y), sunDir.y) * aboveHorizon(sunDir.y)
             * (1.0 - rainStrength * 0.88) * (1.0 - thunderStrength * 0.9);
     vec3 ambient = ambientIrradiance(sunDir);
-    vec3 sunDisc = SUN_ILLUMINANCE * adaptedTint(directTransmittance(sunDir.y)) * (1.0 - rainStrength) * (1.0 - thunderStrength);
+    vec3 sunDisc = SUN_ILLUMINANCE * sunTint(directTransmittance(sunDir.y), sunDir.y) * (1.0 - rainStrength) * (1.0 - thunderStrength);
 
     vec3 sky = skyRadiance(vec3(dir.x, max(dir.y, 0.0), dir.z), sunDir, 8);
     float a = acos(clamp(dot(dir, sunDir), -1.0, 1.0));
