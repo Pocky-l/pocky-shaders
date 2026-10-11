@@ -155,9 +155,12 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     // Rain puddles (Petrichor draws them as water a hair above the ground; real water is at least 0.89 blocks deep):
     // still water with rings from the drops instead of waves, no caustics or foam.
     bool puddle = false;
-    if (isEyeInWater == 0 && !isOpaqueSkyAt(uv)) {
+    // Only the top of the water, with the ground just under it: on a waterfall seen from below the wall behind lies
+    // higher than the water, and the falling water turned into a flat mirror.
+    if (isEyeInWater == 0 && worldNormal.y > 0.5 && !isOpaqueSkyAt(uv)) {
         vec3 groundBelow = mat3(gbufferModelViewInverse) * viewPosition(uv, true);
-        puddle = surfacePlayer.y - groundBelow.y < 0.25;
+        float film = surfacePlayer.y - groundBelow.y;
+        puddle = film > -0.05 && film < 0.25;
     }
     if (puddle) {
         worldNormal = puddleNormal((surfacePlayer + cameraPosition).xz, length(surfacePlayer), sky);
