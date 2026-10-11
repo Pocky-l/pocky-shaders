@@ -146,7 +146,10 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
     float runningFoam = decodeWaterFoam(waterData.xy);
     // Torches, lanterns, sea lanterns and glowstone light the water around them like any block: lit only by the sky,
     // the water stayed dark next to a lamp, and lamps under it hardly showed from above.
-    vec3 blockGlow = blockLightColor() * blockLightCurve(decodeWaterBlockLight(waterData.xy)) * BLOCK_LIGHT_EXPOSURE
+    // A softer falloff than on blocks (the light spreads through the water): the steep curve drew the game's diamond
+    // of light levels as sharp rings around the lamp.
+    float waterBlock = decodeWaterBlockLight(waterData.xy);
+    vec3 blockGlow = blockLightColor() * (waterBlock * waterBlock * 0.45 + waterBlock * 0.05) * BLOCK_LIGHT_EXPOSURE
             / sceneExposure();
     // Stored foam in fifteenths: still water 0..1 (its texture sheen), 2 a tagged Petrichor puddle, streams and
     // waterfalls 3 and more.

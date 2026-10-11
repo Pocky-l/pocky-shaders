@@ -184,32 +184,33 @@ float valueNoise(vec2 p) {
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
-// Water normal, foam and block light in two 16-bit channels of colortex4: each channel holds 12 bits of the octahedral
-// normal, 2 bits of the 4-bit foam amount and 2 bits of the 4-bit block light (both 0..1).
+// Water normal, foam and block light in two 16-bit channels of colortex4: each channel holds 11 bits of the octahedral
+// normal, 2 bits of the 4-bit foam amount and 3 bits of the 6-bit block light (both 0..1). Block light needs the finer
+// steps: with 4 bits the glow of a lamp in the water broke into hard bands.
 vec2 encodeWaterNormal(vec3 n, float foam, float block) {
-    vec2 q = floor(encodeNormal(n) * 4095.0 + 0.5);
+    vec2 q = floor(encodeNormal(n) * 2047.0 + 0.5);
     float f = floor(saturate(foam) * 15.0 + 0.5);
-    float b = floor(saturate(block) * 15.0 + 0.5);
+    float b = floor(saturate(block) * 63.0 + 0.5);
     vec2 fb = vec2(floor(f / 4.0), f - floor(f / 4.0) * 4.0);
-    vec2 bb = vec2(floor(b / 4.0), b - floor(b / 4.0) * 4.0);
-    return (q * 16.0 + fb * 4.0 + bb) / 65535.0;
+    vec2 bb = vec2(floor(b / 8.0), b - floor(b / 8.0) * 8.0);
+    return (q * 32.0 + fb * 8.0 + bb) / 65535.0;
 }
 
 vec3 decodeWaterNormal(vec2 data) {
     vec2 v = floor(data * 65535.0 + 0.5);
-    return decodeNormal(floor(v / 16.0) / 4095.0);
+    return decodeNormal(floor(v / 32.0) / 2047.0);
 }
 
 float decodeWaterFoam(vec2 data) {
     vec2 v = floor(data * 65535.0 + 0.5);
-    vec2 bits = floor((v - floor(v / 16.0) * 16.0) / 4.0);
+    vec2 bits = floor((v - floor(v / 32.0) * 32.0) / 8.0);
     return (bits.x * 4.0 + bits.y) / 15.0;
 }
 
 float decodeWaterBlockLight(vec2 data) {
     vec2 v = floor(data * 65535.0 + 0.5);
-    vec2 bits = v - floor(v / 4.0) * 4.0;
-    return (bits.x * 4.0 + bits.y) / 15.0;
+    vec2 bits = v - floor(v / 8.0) * 8.0;
+    return (bits.x * 8.0 + bits.y) / 63.0;
 }
 
 // Water tint and sky light packed into one 16-bit channel (4 bits each) of colortex4.
