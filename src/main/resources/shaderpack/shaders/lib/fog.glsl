@@ -45,10 +45,15 @@ vec2 mistFadeRange() {
 float mistDensity(vec3 worldPos, out float top) {
     vec2 p = worldPos.xz + frameTimeCounter * vec2(0.35, 0.12);
     float banks = valueNoise(p / 170.0) * 0.65 + valueNoise(p / 61.0 + 17.0) * 0.35;
-    // Billows: the fine pattern shifts with height, so the inside of a bank is lumpy in 3D, not a stack of slices.
-    float wisps = valueNoise(p / 19.0 + vec2(0.11, -0.07) * worldPos.y + 41.0);
     // Swamps and rivers (mistBiome) are covered almost everywhere.
     float cover = smoothstep(0.4 - 0.3 * mistBiome, 0.72 - 0.2 * mistBiome, banks);
+    top = 0.0;
+    if (cover <= 0.0) {
+        // A gap between the banks: the fine noise is not needed.
+        return 0.0;
+    }
+    // Billows: the fine pattern shifts with height, so the inside of a bank is lumpy in 3D, not a stack of slices.
+    float wisps = valueNoise(p / 19.0 + vec2(0.11, -0.07) * worldPos.y + 41.0);
     top = MIST_BASE + MIST_THICKNESS * (0.25 + 0.75 * banks) + (wisps - 0.5) * 6.0;
     return cover * smoothstep(top, top - 6.0, worldPos.y) * (0.55 + 0.45 * wisps);
 }
@@ -57,6 +62,9 @@ float mistDensity(vec3 worldPos, out float top) {
 // bases and gaps), the sky lights it from above, and it glows where the sun shines through it. A few samples over the
 // part of the ray inside the layer, closer together where it begins. Returns premultiplied colour and transmittance.
 vec4 groundMist(vec3 dir, float dist, float strength) {
+    if (strength <= 0.01) {
+        return vec4(0.0, 0.0, 0.0, 1.0);
+    }
     const float layerTop = MIST_BASE + MIST_THICKNESS + 3.0;
     vec2 fade = mistFadeRange();
     float tNear = fade.x;

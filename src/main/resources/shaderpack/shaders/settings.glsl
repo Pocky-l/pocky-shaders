@@ -117,7 +117,7 @@ const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 3
     #define LIGHT_SHAFT_STEPS 8
     #define SS_SHADOW_STEPS 10
     #define SS_SHADOW_GROWTH 1.73
-    #define MIST_STEPS 6
+    #define MIST_STEPS 5
 #elif QUALITY == 1
     #define SHADOW_SAMPLES 8
     #define SSAO_SAMPLES 6
@@ -127,7 +127,7 @@ const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 3
     #define LIGHT_SHAFT_STEPS 12
     #define SS_SHADOW_STEPS 14
     #define SS_SHADOW_GROWTH 1.43
-    #define MIST_STEPS 8
+    #define MIST_STEPS 6
 #elif QUALITY == 2
     #define SHADOW_SAMPLES 12
     #define SSAO_SAMPLES 8
@@ -137,7 +137,7 @@ const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 3
     #define LIGHT_SHAFT_STEPS 16
     #define SS_SHADOW_STEPS 20
     #define SS_SHADOW_GROWTH 1.25
-    #define MIST_STEPS 10
+    #define MIST_STEPS 8
 #else
     #define SHADOW_SAMPLES 16
     #define SSAO_SAMPLES 12
@@ -147,5 +147,5 @@ const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 3
     #define LIGHT_SHAFT_STEPS 20
     #define SS_SHADOW_STEPS 24
     #define SS_SHADOW_GROWTH 1.19
-    #define MIST_STEPS 12
+    #define MIST_STEPS 10
 #endif
