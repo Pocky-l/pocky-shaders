@@ -66,9 +66,10 @@ void main() {
         }
         float foam = 0.0;
         if (running) {
-            foam = side ? 0.3 + 0.55 * streak : 0.08 + 0.45 * streak;
+            foam = side ? 0.3 + 0.55 * streak : 0.14 + 0.4 * streak;
         } else {
-            foam = streak * 0.1 * (1.0 - smoothstep(16.0, 48.0, dist));
+            // At most 1/15 once stored: running water always stores more (composite tells them apart by it).
+            foam = streak * 0.06 * (1.0 - smoothstep(16.0, 48.0, dist));
         }
         outTranslucent = vec4(0.0);
         outWater = vec4(encodeWaterNormal(wn, foam), packWater(vertexColor.rgb, lightmap.y), 1.0);

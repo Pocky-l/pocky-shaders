@@ -113,6 +113,8 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise) {
 vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float normalSpread) {
     vec3 worldNormal = decodeWaterNormal(waterData.xy);
     float runningFoam = decodeWaterFoam(waterData.xy);
+    // Streams and waterfalls store foam above 0.1 (still water at most 1/15 for its texture sheen).
+    bool running = runningFoam > 0.1;
     vec4 tintSky = unpackWater(waterData.z);
     vec3 tint = tintSky.rgb;
     float sky = tintSky.a;
@@ -145,6 +147,8 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         }
         vec3 flatNormal = mat3(gbufferModelView) * faceNormal;
         vec2 offset = (viewNormal.xy - flatNormal.xy) * 0.06 * saturate(behind * 0.25);
+        // Through a thin waterfall the streaks smeared the world behind into stripes.
+        offset *= running ? 0.3 : 1.0;
         vec2 candidate = uv + offset / max(1.0, -surfaceView.z * 0.08);
         if (texture(depthtex1, candidate).r > texture(depthtex0, uv).r) {
             refractUv = candidate;
@@ -235,6 +239,18 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         scatterColor = mix(scatterColor, vec3(luminance(scatterColor)) * vec3(0.8, 1.0, 1.0), 0.5 * thunderStrength);
         result = below * transmit + scatterColor * (1.0 - exp(-waterDist * 0.4 / WATER_CLARITY));
         result *= mix(0.7, 1.0, smoothstep(0.1, 0.8, waterDist));
+        if (running) {
+            // A stream or a waterfall is only a block or less of water: by absorption alone it was clear as glass.
+            // Like vanilla's flowing water it carries its own body colour: the biome's water tint, lit like a block.
+#ifdef DIM_OVERWORLD
+            vec3 bodyLight = (ambientLightColor() + directLightColor() * saturate(dot(worldNormal, lightDirection())))
+                    / PI * sky;
+#else
+            vec3 bodyLight = vec3(0.05);
+#endif
+            bodyLight = vanillaLightResponse(bodyLight + blockLightColor() * 0.02);
+            result = mix(result, srgbToLinear(tint) * 0.6 * bodyLight, 0.5);
+        }
     }
 
 #if WATER_REFLECTIONS > 0
@@ -245,6 +261,8 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         float fresnel = 0.07 + 0.55 * fresnelSchlick(dot(-viewDir, viewNormal), mix(0.02, 0.05, shallow));
         // Grazing views of far water would turn it into a white mirror of the sky; keep its colour like near water.
         fresnel *= mix(1.0, 0.7, smoothstep(80.0, 400.0, surfaceDist));
+        // Broken, falling water is no mirror: a waterfall reflected the sky like a pane of glass.
+        fresnel *= running ? 0.5 : 1.0;
         vec3 reflection = vec3(0.0);
 #ifdef DIM_OVERWORLD
         vec3 reflectWorld = mat3(gbufferModelViewInverse) * reflectView;
