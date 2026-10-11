@@ -136,6 +136,10 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise, out vec3 hitView)
 }
 #endif
 
+// Faint light every water keeps in the dark, neutral and a little cool: an amber floor (the torch colour, with no
+// torch near) dyed streams and waterfalls in a dark cave brown.
+const vec3 WATER_DARK_LIGHT = vec3(0.011, 0.013, 0.015);
+
 // normalSpread: screen-space change of the water normal per pixel (taken outside any branch).
 vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float normalSpread) {
     vec3 worldNormal = decodeWaterNormal(waterData.xy);
@@ -168,6 +172,9 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
                 : vec3(0.0, 0.0, sign(worldNormal.z));
     }
     vec3 flatNormal = mat3(gbufferModelView) * faceNormal;
+    // A waterfall or the side of a stream, against the flowing top of a river or a pool, which should look like the
+    // still water around it: only the current's streaks move across it.
+    bool falling = running && faceNormal.y == 0.0;
 
     // Refraction: look up the scene below with an offset from the waves, unless that lands in front of the water.
     vec2 refractUv = uv;
@@ -261,7 +268,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
         vec3 light = vec3(0.04);
 #endif
-        light = vanillaLightResponse(light + blockLightColor() * 0.02);
+        light = vanillaLightResponse(light + WATER_DARK_LIGHT);
         // Shallows glow turquoise over the bottom, open deep water turns a darker, richer blue.
         vec3 shallowScatter = mix(vec3(0.05, 0.22, 0.26), tint * vec3(0.3, 0.5, 0.55), 0.5);
         vec3 deepScatter = mix(vec3(0.02, 0.10, 0.22), tint * vec3(0.15, 0.3, 0.5), 0.5);
@@ -281,8 +288,14 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
             vec3 bodyLight = vec3(0.05);
 #endif
-            bodyLight = vanillaLightResponse(bodyLight + blockLightColor() * 0.02);
-            result = mix(result, srgbToLinear(tint) * 0.6 * bodyLight, 0.5);
+            bodyLight = vanillaLightResponse(bodyLight + WATER_DARK_LIGHT);
+            // Lit like whatever shows behind it (a torch-lit cave wall), never darker: in a dark cave the falling water
+            // was only the faint amber floor light - a muddy brown curtain hiding the cave behind it.
+            bodyLight = max(bodyLight, vec3(luminance(below) * 2.0));
+            // Over a deeper pool the absorption colours it already: a body colour there turned the flowing water
+            // into a pale sheet next to the dark still water.
+            float body = falling ? 0.5 : 0.5 * (1.0 - smoothstep(0.4, 1.5, waterDist));
+            result = mix(result, srgbToLinear(tint) * 0.6 * bodyLight, body);
         }
     }
 
@@ -298,7 +311,7 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         // Grazing views of far water would turn it into a white mirror of the sky; keep its colour like near water.
         fresnel *= mix(1.0, 0.7, smoothstep(80.0, 400.0, surfaceDist));
         // Broken, falling water is no mirror: a waterfall reflected the sky like a pane of glass.
-        fresnel *= running ? 0.5 : 1.0;
+        fresnel *= falling ? 0.5 : 1.0;
         // Where nothing is found to mirror (no hit on screen, and no open sky above - a cave, under a roof) the water
         // keeps its own colour: mirroring black there cut dark, ragged bands into the reflection.
         vec3 reflection = result;
@@ -351,8 +364,13 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
 #else
         vec3 foamLight = vec3(0.05);
 #endif
-        foamLight = vanillaLightResponse(foamLight + blockLightColor() * 0.02);
-        result = mix(result, foamLight * 0.85, runningFoam * 0.75);
+        foamLight = vanillaLightResponse(foamLight + WATER_DARK_LIGHT);
+        foamLight = max(foamLight, vec3(luminance(below) * 1.2));
+        // Streaks are water stirred up, a little of its colour in them, not white paint (a low sun made them beige).
+        vec3 tintColor = srgbToLinear(tint);
+        foamLight *= mix(vec3(1.0), tintColor / max(max(tintColor.r, max(tintColor.g, tintColor.b)), 1e-3), 0.3);
+        float foam = running && !falling ? max(runningFoam - 2.0 / 15.0, 0.0) : runningFoam;
+        result = mix(result, foamLight * 0.85, foam * 0.75);
     }
 
 #ifdef WATER_FOAM

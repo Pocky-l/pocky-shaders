@@ -52,9 +52,10 @@ void main() {
         // a river), its bright streaks bend the surface and become broken, foamy water; waterfalls churn the most.
         // Derivatives are taken outside the branches.
         float lum = luminance(texture(gtexture, texcoord).rgb);
-        float streak = running ? smoothstep(0.645, 0.78, lum) : smoothstep(0.6, 0.8, lum);
+        // A soft ramp: a narrow one cut the streaks into hard, bright chevrons that read as scratches.
+        float streak = running ? smoothstep(0.62, 0.85, lum) : smoothstep(0.6, 0.8, lum);
         float near = 1.0 - smoothstep(24.0, 64.0, dist);
-        float h = running ? streak * 0.035 * near : 0.0;
+        float h = running ? streak * 0.02 * near : 0.0;
         vec3 dpdx = dFdx(playerPos);
         vec3 dpdy = dFdy(playerPos);
         vec2 dh = vec2(dFdx(h), dFdy(h));
@@ -66,7 +67,8 @@ void main() {
         }
         float foam = 0.0;
         if (running) {
-            foam = side ? 0.3 + 0.55 * streak : 0.14 + 0.4 * streak;
+            // The 2/15 of a flowing top only tags it as running (composite takes it off before drawing foam).
+            foam = side ? 0.3 + 0.55 * streak : 2.0 / 15.0 + 0.3 * streak;
         } else {
             // At most 1/15 once stored: running water always stores more (composite tells them apart by it).
             foam = streak * 0.06 * (1.0 - smoothstep(16.0, 48.0, dist));
