@@ -15,7 +15,12 @@ in vec2 texcoord;
 in vec2 lightmap;
 in vec4 vertexColor;
 
+#if defined PROG_WEATHER
+// Rain and snow share the particles' layer (see gbuffers_lit): over water they stay in front of it.
+/* RENDERTARGETS: 8 */
+#else
 /* RENDERTARGETS: 0 */
+#endif
 layout(location = 0) out vec4 outColor;
 
 void main() {

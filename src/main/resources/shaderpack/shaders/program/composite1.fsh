@@ -7,6 +7,7 @@
 uniform sampler2D colortex7;
 #include "/lib/sky.glsl"
 #endif
+#include "/lib/exposure.glsl"
 
 const bool colortex5MipmapEnabled = true;
 
@@ -72,28 +73,6 @@ vec3 lensFlare(vec2 uv) {
 }
 #endif
 
-float exposure() {
-    float eyeSky = smoothstep(0.0, 0.7, float(eyeBrightnessSmooth.y) / 240.0);
-#ifdef DIM_OVERWORLD
-    // Scene brightness key of an average lit surface; 1.75 is a clear midday. A lightning flash is left out, so the
-    // eye does not adapt to it and the flash shows. Rain and storms aim lower: they should feel gloomy, not like a
-    // grey day brightened up to noon.
-    float flash = luminance(flashSkyRadiance()) * OVERCAST_IRRADIANCE;
-    float key = (luminance(directLightColor()) * 0.6 + max(luminance(ambientLightColor()) - flash, 0.0)) / PI;
-    // Snow keeps the world bright (white ground and air); a thunderstorm in rain is properly dark.
-    float target = 1.75 * mix(1.0, 0.62, rainStrength * (1.0 - 0.7 * snowWeather)) * mix(1.0, 0.36, stormDarkness());
-    // At sunrise and sunset the eye keeps the bright sky from washing out: deep colours over darker land.
-    target *= 1.0 - 0.45 * twilightAmount(sunDirection().y);
-    float outdoor = clamp(pow(target / max(key, 1e-3), 0.5), 0.9, 3.2);
-#else
-    float outdoor = 1.0;
-#endif
-    // Away from the sky (caves, deep inside buildings) the eye adapts to the dark as well; the Brightness option sets
-    // how far.
-    // Not too far: lit rock next to a torch or lava stayed washed out, the dark had no depth.
-    float cave = mix(1.2, 2.2, screenBrightness);
-    return EXPOSURE * mix(cave, outdoor, eyeSky);
-}
 
 void main() {
     vec3 color = texture(colortex0, texcoord).rgb;
@@ -103,7 +82,7 @@ void main() {
     float amount = (0.025 + rainStrength * 0.03 + float(isEyeInWater == 1) * 0.08 + underground * 0.035) * BLOOM_STRENGTH;
     color = mix(color, bloom(texcoord), amount);
 #endif
-    color *= exposure();
+    color *= sceneExposure();
 #if defined LENS_FLARE && defined DIM_OVERWORLD
     color += lensFlare(texcoord);
 #endif

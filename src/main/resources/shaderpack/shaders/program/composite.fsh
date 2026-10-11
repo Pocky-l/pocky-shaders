@@ -17,6 +17,8 @@ uniform sampler2D colortex0;
 uniform sampler2D colortex2;
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
+// Particles, rain and snow (premultiplied by their blending), laid over everything else.
+uniform sampler2D colortex8;
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
 #ifdef DISTANT_HORIZONS
@@ -456,6 +458,8 @@ void main() {
         color = mix(color, applyFog(color, playerPos, renderDistance), cloudTransmittance);
     }
     color = applyBlindnessFog(color, sky ? 1000.0 : dist);
+    vec4 particles = texture(colortex8, texcoord);
+    color = color * (1.0 - particles.a) + particles.rgb;
     color += lightShafts(texcoord, noise);
 
 #if DEBUG_VIEW == 1

@@ -51,9 +51,17 @@ vec3 texelCentre(vec3 pos, vec2 uv) {
 }
 #endif
 
+#if defined PROG_TEXTURED
+// Particles go to their own layer, laid over the finished scene at the end of composite: drawn straight into the
+// scene, the water shading there treated smoke in front of a river as part of the riverbed and the water showed
+// through it.
+/* RENDERTARGETS: 8 */
+layout(location = 0) out vec4 outColor;
+#else
 /* RENDERTARGETS: 0,1 */
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outData;
+#endif
 
 void main() {
     vec4 tex = texture(gtexture, texcoord);
@@ -102,7 +110,9 @@ void main() {
     lit += emission(s.albedo, 3.0, material == MAT_EMISSIVE) * emissive;
 
     outColor = vec4(lit, color.a);
+#if !defined PROG_TEXTURED
     vec3 viewNormal = mat3(gbufferModelView) * n;
     float encoded = (float(material) * 256.0 + floor(lightmap.y * 255.0 + 0.5)) / 65535.0;
     outData = vec4(encodeNormal(viewNormal), encoded, 1.0);
+#endif
 }

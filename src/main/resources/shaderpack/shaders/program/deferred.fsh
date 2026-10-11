@@ -10,10 +10,12 @@ const int colortex3Format = RGBA16F;
 const int colortex4Format = RGBA16;
 const int colortex5Format = RGBA16F;
 const int colortex6Format = R8;
+const int colortex8Format = RGBA16F;
 const vec4 colortex0ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 const vec4 colortex1ClearColor = vec4(0.5, 0.5, 0.0, 0.0);
 const vec4 colortex3ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 const vec4 colortex4ClearColor = vec4(0.5, 0.5, 0.0, 0.0);
+const vec4 colortex8ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 */
 
 uniform sampler2D colortex1;

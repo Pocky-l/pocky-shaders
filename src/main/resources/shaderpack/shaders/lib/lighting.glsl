@@ -1,5 +1,7 @@
 // Forward shading used by all lit gbuffers programs. Needs common, atmosphere, sky and (in the overworld) shadow.
 
+#include "/lib/exposure.glsl"
+
 struct Surface {
     vec3 albedo;        // linear
     vec3 playerPos;     // relative to the camera, world axes
@@ -26,6 +28,9 @@ Lights frameLights() {
 #endif
     return l;
 }
+
+// Exposure that block light is shown at, whatever the eye is adapted to (about a dark-adapted cave's).
+const float BLOCK_LIGHT_EXPOSURE = 1.3;
 
 // Firelight: warm amber (torches, lava and lanterns all burn warm in the game).
 vec3 blockLightColor() {
@@ -143,6 +148,9 @@ vec3 shade(Surface s, Lights lights, float noise) {
     float blockLevel = mix(s.lightmap.x, 1.0 - pow(1.0 - s.lightmap.x, 3.0), 0.5 * screenBrightness);
     vec3 block = blockLightColor() * (blockLightCurve(blockLevel) + handLight(s.playerPos))
             * blockLightFlicker(s.playerPos + cameraPosition);
+    // Torches and lamps look the same by day, at night and in a cave: the eye's adaptation to the dark (up to 3x at
+    // night) is taken back out of their light - amplified, every lantern lit its surroundings like a floodlight.
+    block *= BLOCK_LIGHT_EXPOSURE / sceneExposure();
 
     vec3 direct = vec3(0.0);
     vec3 sheen = vec3(0.0);
