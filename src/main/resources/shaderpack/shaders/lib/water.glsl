@@ -17,12 +17,14 @@ float waterHeight(vec2 p, float detail) {
 
 // Rings spreading from rain drops on a still puddle (the same pattern as Petrichor's own puddle shader). One drop per
 // half-block cell and cycle, a share of the cells active by how hard it rains; each drop leaves a small dimple and a
-// ring that widens to about half a block with a couple of crests, fading as it grows. Returns the surface slope.
-vec2 rainRipples(vec2 p, float time, float amount) {
+// ring that widens to about half a block with a couple of crests, fading as it grows. Returns the surface slope (xy)
+// and how much light the crests and the splash catch (z).
+vec3 rainRipples(vec2 p, float time, float amount) {
     const float CELL = 0.5;
     vec2 q = p / CELL;
     vec2 cell = floor(q);
     vec2 slope = vec2(0.0);
+    float glow = 0.0;
     for (int y = -1; y <= 1; y++) {
         for (int x = -1; x <= 1; x++) {
             vec2 c = cell + vec2(float(x), float(y));
@@ -45,9 +47,13 @@ vec2 rainRipples(vec2 p, float time, float amount) {
             float fade = (1.0 - age) * (1.0 - age);
             float dimple = exp(-dist * dist / 0.0016) * (1.0 - smoothstep(0.0, 0.12, age)) * -2.0 * dist / 0.0016;
             slope += (dh * 0.0045 * fade + dimple * 0.004) * d / (dist + 1e-4);
+            // The crest as a thin bright line, the splash as a short-lived spot.
+            float crest = exp(-s0 * s0 / (0.022 * 0.022));
+            float splash = exp(-dist * dist / 0.0025) * (1.0 - smoothstep(0.0, 0.15, age));
+            glow += crest * fade + splash * 0.8;
         }
     }
-    return slope;
+    return vec3(slope, glow);
 }
 
 // How much of the rain lands on an open water surface at this distance and sky light (0 = none, rings off).
@@ -55,27 +61,16 @@ float rainRingFade(float dist, float skyLight) {
     return rainStrength * (1.0 - snowWeather) * smoothstep(0.7, 0.95, skyLight) * (1.0 - smoothstep(16.0, 48.0, dist));
 }
 
-// Slope of the rain rings on water: one drop per half-block cell and cycle at full rain, and in a downpour or a storm
+// Slope (xy) and glow (z) of the rain rings on water: one drop per half-block cell and cycle at full rain, and in a downpour or a storm
 // a second, offset layer of drops in between - a heavy rain covers the water with rings.
-vec2 rainRings(vec2 worldXZ, float fade) {
+vec3 rainRings(vec2 worldXZ, float fade) {
     float heavy = saturate((rainHeaviness() - 0.6) * 0.8 + thunderStrength * 0.6);
     float amount = saturate(rainStrength * (0.75 + 0.35 * heavy));
-    vec2 slope = rainRipples(worldXZ, frameTimeCounter, amount);
+    vec3 rings = rainRipples(worldXZ, frameTimeCounter, amount);
     if (heavy > 0.0) {
-        slope += rainRipples(worldXZ + vec2(0.25, 0.37), frameTimeCounter * 1.13 + 3.1, amount * heavy);
+        rings += rainRipples(worldXZ + vec2(0.25, 0.37), frameTimeCounter * 1.13 + 3.1, amount * heavy);
     }
-    return slope * fade;
-}
-
-// Normal of a rain puddle: still water, with rings from the drops where rain reaches it. Rings smaller than a pixel
-// only shimmer, so they fade out in the distance.
-vec3 puddleNormal(vec2 worldXZ, float dist, float skyLight) {
-    float fade = rainRingFade(dist, skyLight);
-    if (fade <= 0.0) {
-        return vec3(0.0, 1.0, 0.0);
-    }
-    vec2 slope = rainRings(worldXZ, fade);
-    return normalize(vec3(-slope.x, 1.0, -slope.y));
+    return rings * fade;
 }
 
 // Share of the fine ripples kept at a distance from the camera.

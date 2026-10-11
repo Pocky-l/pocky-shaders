@@ -164,17 +164,21 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         float film = surfacePlayer.y - groundBelow.y;
         puddle = puddle || film > -0.05 && film < 0.25;
     }
+    // Rings from the drops where rain reaches still water: puddles are flat besides them, lakes, rivers and the sea
+    // get them over their waves, many of them in a downpour. Rings smaller than a pixel only shimmer, so they fade
+    // out in the distance. Their crests and splashes also catch light (added at the end), or they hardly showed.
+    float ringGlow = 0.0;
     if (puddle) {
-        worldNormal = puddleNormal((surfacePlayer + cameraPosition).xz, length(surfacePlayer), sky);
-        viewNormal = mat3(gbufferModelView) * worldNormal;
-    } else if (!running && isEyeInWater == 0 && worldNormal.y > 0.5) {
-        // Rain on lakes, rivers and the sea: the same rings from the drops over the waves, many of them in a downpour.
-        float rings = rainRingFade(length(surfacePlayer), sky);
-        if (rings > 0.0) {
-            vec2 slope = rainRings((surfacePlayer + cameraPosition).xz, rings) * 1.3;
-            worldNormal = normalize(worldNormal + vec3(-slope.x, 0.0, -slope.y));
-            viewNormal = mat3(gbufferModelView) * worldNormal;
+        worldNormal = vec3(0.0, 1.0, 0.0);
+    }
+    if ((puddle || !running && worldNormal.y > 0.5) && isEyeInWater == 0) {
+        float ringFade = rainRingFade(length(surfacePlayer), sky);
+        if (ringFade > 0.0) {
+            vec3 rings = rainRings((surfacePlayer + cameraPosition).xz, ringFade) * vec3(1.8, 1.8, 1.0);
+            worldNormal = normalize(worldNormal + vec3(-rings.x, 0.0, -rings.y));
+            ringGlow = saturate(rings.z);
         }
+        viewNormal = mat3(gbufferModelView) * worldNormal;
     }
 
     // The face's own normal without the waves: up or down for the surface (seen from below it faces down), the
@@ -406,6 +410,14 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         }
     }
 #endif
+    if (ringGlow > 0.0) {
+#ifdef DIM_OVERWORLD
+        vec3 ringLight = (ambientLightColor() * 1.4 + directLightColor() * 0.3) / PI * sky;
+#else
+        vec3 ringLight = vec3(0.05);
+#endif
+        result = mix(result, vanillaLightResponse(ringLight), ringGlow * 0.45);
+    }
     return result;
 }
 
