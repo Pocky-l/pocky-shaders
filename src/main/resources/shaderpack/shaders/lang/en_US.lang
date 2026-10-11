@@ -79,6 +79,15 @@ screen.NATURE=Nature
 screen.WATER=Water
 screen.SKY=Sky and Fog
 screen.POST=Image
+screen.WEATHER=Weather
+option.MOD_WEATHER=Weather from Pocky Mods
+option.MOD_WEATHER.comment=With Petrichor, Hoarfrost and Rustling Leaves installed the shaders show their weather: rain from drizzle to downpour, sun showers under a blue sky, ground that stays wet and dries after the rain, their lightning, snow kinds and blizzards, plants bending in their wind. Off: vanilla weather only.
+option.WEATHER_GRADING=Weather Colours
+option.WEATHER_GRADING.comment=Every weather has its own light: golden sun showers, fresher colours after the rain, crisp snowy land, a colourless white-out in a blizzard.
+option.RAINBOWS=Rainbows
+option.RAINBOWS.comment=A rainbow opposite the sun in sun showers and when some rains clear up in daylight (Petrichor decides when; without it now and then after a daytime rain).
+option.SNOW_SPARKLE=Snow Sparkle
+option.SNOW_SPARKLE.comment=Snow glitters in the sun and moonlight: single pixels catch the light and twinkle as you move.
 screen.DEBUG=Debug
 option.DEBUG_VIEW=Debug View
 option.DEBUG_VIEW.comment=Render sources: red = vanilla chunks, blue = Distant Horizons, green = water. Magenta or white = both drew the same pixel.

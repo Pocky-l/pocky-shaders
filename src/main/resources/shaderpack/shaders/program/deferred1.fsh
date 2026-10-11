@@ -157,7 +157,8 @@ void main() {
 
     if (sky) {
         // Atmosphere behind the vanilla sun, moon and stars (drawn additively into colortex0).
-        color = sampleSkyLut(dir, sunDir) + sunGlow(dir, sunDir) + scene.rgb * (1.0 - rainStrength);
+        color = sampleSkyLut(dir, sunDir);
+        color += rainbowRadiance(dir, sunDir, color) + sunGlow(dir, sunDir) + scene.rgb * (1.0 - overcast());
     }
 
 #if CLOUDS > 0

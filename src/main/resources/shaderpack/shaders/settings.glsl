@@ -36,6 +36,15 @@ const float shadowIntervalSize = 16.0;
 #define FOLIAGE_TRANSLUCENCY
 #define WET_SURFACES
 
+// Weather
+// With Petrichor, Hoarfrost and Rustling Leaves installed the pack shows their weather: rain types, sun showers, wetness,
+// lightning, snow kinds and blizzards, their wind (modweather.glsl). Off: vanilla weather only.
+#define MOD_WEATHER
+#define RAINBOWS
+#define SNOW_SPARKLE
+// Colour grading by weather: golden sun showers, the washed look after rain, crisp snow, a colourless white-out.
+#define WEATHER_GRADING
+
 // Water
 #define WATER_REFLECTIONS 2 // [0 1 2]
 #define WATER_REFRACTION
@@ -104,6 +113,14 @@ const float shadowIntervalSize = 16.0;
 #ifdef LENS_FLARE
 #endif
 #ifdef FXAA
+#endif
+#ifdef MOD_WEATHER
+#endif
+#ifdef RAINBOWS
+#endif
+#ifdef SNOW_SPARKLE
+#endif
+#ifdef WEATHER_GRADING
 #endif
 
 const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 30.0 40.0]

@@ -5,23 +5,37 @@
 // air right around you stays clear, the curtain builds up beyond it). rainSheets scales the rain part.
 float fogOpticalDepth(float dist, float rainSheets) {
     // Falling snow hides the distance more than rain, a blizzard turns it into a white-out.
-    float snow = 1.0 + snowWeather * (0.4 + 1.4 * thunderStrength);
+    float snow = 1.0 + snowWeather * (0.4 + 1.4 * blizzard());
     // Plain rain only veils the distance (islands a few hundred blocks out stay visible); a thunderstorm closes in.
-    float rain = mix(0.0024, 0.0045, thunderStrength);
-    return FOG_DENSITY * (0.00035 * dist + rainStrength * rain * snow * rainSheets * max(dist - 16.0, 0.0));
+    // A drizzle is a light veil, a downpour a grey wall; through a sun shower the distance stays clear.
+    float rain = mix(0.0024, 0.0045, thunderStrength) * rainHeaviness() * (1.0 - 0.5 * sunShower());
+    float precipitation = rainStrength * rain * snow * rainSheets * max(dist - 16.0, 0.0);
+    // Hoarfrost knows how far one sees in each kind of snow (vanilla fog ends at 1.15 x its visibility): the same
+    // distance here, from a light veil in flurries to a white-out a few blocks away in a heavy blizzard.
+    float visibility = snowVisibility();
+    if (visibility > 0.0) {
+        float gust = mix(1.0, clamp(modTexel(4).z, 0.6, 1.8), 0.5);
+        float hoarfrost = snowAmount() * 3.0 / (visibility * 1.15) * gust * rainSheets * max(dist - 4.0, 0.0);
+        precipitation = mix(precipitation, hoarfrost, snowWeather);
+    }
+    return FOG_DENSITY * (0.00035 * dist + precipitation);
 }
 
 // Heavier and lighter sheets of rain sweeping across the land with the wind: rain density along a view ray, read
 // where the ray is 30..140 blocks out (so the sheets stand in the world rather than sticking to the screen).
+// In snow the sheets are clouds of snow streaming past, smaller and quicker, strongest in a blizzard. With Petrichor
+// the whole curtain also swells and thins with its gusts.
 float rainSheets(vec3 dir, float dist) {
     if (rainStrength <= 0.0) {
         return 1.0;
     }
     vec2 p = cameraPosition.xz + dir.xz * clamp(dist, 30.0, 140.0);
-    vec2 drift = frameTimeCounter * vec2(3.5, 1.2);
-    float n = valueNoise((p - drift) / 90.0) * 0.65 + valueNoise((p - drift * 1.4) / 35.0 + 9.0) * 0.35;
-    float strength = 0.6 + 0.6 * thunderStrength;
-    return mix(1.0, 0.45 + 1.3 * n, strength);
+    float squall = blizzard();
+    vec2 drift = windDrift() * mix(3.5, 9.0, squall);
+    float scale = mix(90.0, 40.0, squall);
+    float n = valueNoise((p - drift) / scale) * 0.65 + valueNoise((p - drift * 1.4) / (scale * 0.39) + 9.0) * 0.35;
+    float strength = 0.6 + 0.6 * max(thunderStrength, squall);
+    return mix(1.0, 0.45 + 1.3 * n, strength) * mix(1.0, rainGust(), 0.6);
 }
 
 #ifdef DIM_OVERWORLD
@@ -43,7 +57,7 @@ vec2 mistFadeRange() {
 
 // Density at a world position; top: the height of the bank's top above it.
 float mistDensity(vec3 worldPos, out float top) {
-    vec2 p = worldPos.xz + frameTimeCounter * vec2(0.35, 0.12);
+    vec2 p = worldPos.xz - windDrift() * 0.35;
     float banks = valueNoise(p / 170.0) * 0.65 + valueNoise(p / 61.0 + 17.0) * 0.35;
     // Swamps and rivers (mistBiome) are covered almost everywhere.
     float cover = smoothstep(0.4 - 0.3 * mistBiome, 0.72 - 0.2 * mistBiome, banks);
@@ -164,7 +178,8 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     if (LOW_HAZE > 0.0) {
         vec2 mid = cameraPosition.xz + playerPos.xz * 0.5;
         float banks = 0.7 + 0.6 * valueNoise(mid / 220.0 + frameTimeCounter * vec2(0.004, 0.002));
-        float weather = LOW_HAZE * (1.0 - rainStrength);
+        // After a rain the sun draws the water from the wet land: more of it, until the ground has dried.
+        float weather = LOW_HAZE * (1.0 - rainStrength) * (1.0 + 0.8 * afterRain());
         float sheltered = smoothstep(0.05, 0.6, eyeSky);
         // Surface haze: a ray crosses about SURFACE_LAYER / |dir.y| blocks of it before reaching the surface, so it
         // gathers on far ground and water seen at a shallow angle and stays thin right around the player and looking

@@ -404,7 +404,9 @@ vec3 lightShafts(vec2 uv, float noise) {
     // Half neutral: the light scattered in the air is paler than the low sun itself (a saturated gold flooded the screen).
     vec3 light = directLightColor();
     light = mix(vec3(luminance(light)), light, 0.5);
-    return light * lit * facing * 0.025 * LIGHT_SHAFT_STRENGTH * eyeSky * (1.0 - rainStrength * 0.8);
+    // Humid air shows the rays best: after a rain, and above all in a sun shower, the sun through the falling drops.
+    float humid = 1.0 + 0.6 * afterRain() + 1.2 * sunShower() * rainStrength;
+    return light * lit * facing * 0.025 * LIGHT_SHAFT_STRENGTH * eyeSky * (1.0 - overcast() * 0.8) * humid;
 #else
     return vec3(0.0);
 #endif

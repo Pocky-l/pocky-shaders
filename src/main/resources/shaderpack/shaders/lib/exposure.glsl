@@ -12,8 +12,10 @@ float sceneExposure() {
     // grey day brightened up to noon.
     float flash = luminance(flashSkyRadiance()) * OVERCAST_IRRADIANCE;
     float key = (luminance(directLightColor()) * 0.6 + max(luminance(ambientLightColor()) - flash, 0.0)) / PI;
-    // Snow keeps the world bright (white ground and air); a thunderstorm in rain is properly dark.
-    float target = 1.75 * mix(1.0, 0.62, rainStrength * (1.0 - 0.7 * snowWeather)) * mix(1.0, 0.36, stormDarkness());
+    // Snow keeps the world bright (white ground and air); a thunderstorm in rain is properly dark. A drizzle is only a
+    // little gloomy, a downpour more so.
+    float gloom = overcast() * (0.6 + 0.4 * rainHeaviness());
+    float target = 1.75 * mix(1.0, 0.62, gloom * (1.0 - 0.7 * snowWeather)) * mix(1.0, 0.36, stormDarkness());
     // At sunrise and sunset the eye keeps the bright sky from washing out: deep colours over darker land.
     target *= 1.0 - 0.45 * twilightAmount(sunDirection().y);
     float outdoor = clamp(pow(target / max(key, 1e-3), 0.5), 0.9, 3.2);

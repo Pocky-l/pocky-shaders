@@ -57,7 +57,7 @@ vec3 puddleNormal(vec2 worldXZ, float dist, float skyLight) {
     if (near <= 0.0) {
         return vec3(0.0, 1.0, 0.0);
     }
-    float amount = saturate(rainStrength * 0.75 + thunderStrength * 0.25);
+    float amount = saturate((rainStrength * 0.75 + thunderStrength * 0.25) * min(rainHeaviness(), 1.3));
     vec2 slope = rainRipples(worldXZ, frameTimeCounter, amount) * near;
     return normalize(vec3(-slope.x, 1.0, -slope.y));
 }

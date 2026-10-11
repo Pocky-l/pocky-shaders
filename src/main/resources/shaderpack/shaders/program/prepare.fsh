@@ -49,7 +49,7 @@ void main() {
             sun *= mix(vec3(1.0), rose / luminance(rose), morning() * twilightAmount(sunDir.y) * 0.6);
             vec3 moon = MOON_ILLUMINANCE * moonPhaseLight() * MOON_TINT * directTransmittance(-sunDir.y)
                     * aboveHorizon(-sunDir.y);
-            value = (sun + moon) * (1.0 - rainStrength * 0.88) * (1.0 - thunderStrength * 0.9);
+            value = (sun + moon) * (1.0 - overcast() * 0.88) * (1.0 - thunderStrength * 0.9);
         } else if (pixel.x == PIXEL_AMBIENT_COLOR.x) {
             // Single scattering alone makes skylight far too blue (the missing multiple scattering and the light
             // the ground bounces back up are both close to white): shadows would turn cyan.
@@ -59,7 +59,7 @@ void main() {
             float night = smoothstep(0.05, -0.1, sunDir.y);
             value = max(sky, vec3(0.05, 0.06, 0.08) * (1.0 + rainStrength * 0.6 * night));
         } else {
-            value = SUN_ILLUMINANCE * sunTint(directTransmittance(sunDir.y), sunDir.y) * (1.0 - rainStrength)
+            value = SUN_ILLUMINANCE * sunTint(directTransmittance(sunDir.y), sunDir.y) * (1.0 - overcast())
                     * (1.0 - thunderStrength);
         }
         outSky = vec4(value, 1.0);

@@ -99,6 +99,30 @@ vec3 vanillaLightResponse(vec3 light) {
     return light / (1.0 + luminance(light) * LIGHT_RESPONSE);
 }
 
+// Snow glitters in the sun: here and there a single texel of a snow surface catches the light, and which ones do
+// changes as the viewer moves, like the facets of real snow crystals. Near-white, colourless top faces in snowy land
+// only (vanilla snow and Hoarfrost's cover alike); gone beyond a few chunks, where a texel is smaller than a pixel.
+float snowSparkle(Surface s, vec3 viewDir) {
+#ifdef SNOW_SPARKLE
+    float dist = length(s.playerPos);
+    if (snowWeather <= 0.0 || s.normal.y < 0.7 || dist > 28.0) {
+        return 0.0;
+    }
+    float m = max(s.albedo.r, max(s.albedo.g, s.albedo.b));
+    float colour = m - min(s.albedo.r, min(s.albedo.g, s.albedo.b));
+    float white = smoothstep(0.55, 0.75, m) * (1.0 - smoothstep(0.06, 0.15, colour));
+    if (white <= 0.0) {
+        return 0.0;
+    }
+    vec3 texel = floor((s.playerPos + cameraPosition) * 16.0 + s.normal * 0.01);
+    vec2 facet = floor(viewDir.xz * 7.0);
+    float glint = step(0.986, hash13(texel + vec3(facet.x * 17.0, facet.y * 29.0, 0.0)));
+    return glint * white * snowWeather * (1.0 - smoothstep(14.0, 28.0, dist)) * 0.3;
+#else
+    return 0.0;
+#endif
+}
+
 // Light reaching the surface from the light held in hand.
 float handLight(vec3 playerPos) {
 #ifdef HANDHELD_LIGHT
@@ -129,7 +153,7 @@ vec3 shade(Surface s, Lights lights, float noise) {
     float up = foliage ? 0.85 : 0.72 + 0.28 * s.normal.y;
     // The sky is brighter around the sun: side faces turned towards it get a little more of its light.
     vec2 sunSide = l.xz / max(length(l.xz), 1e-4);
-    float side = foliage ? 0.0 : dot(s.normal.xz, sunSide) * (1.0 - rainStrength);
+    float side = foliage ? 0.0 : dot(s.normal.xz, sunSide) * (1.0 - overcast());
     // Lambertian: radiance = albedo * irradiance / pi.
     vec3 ambient = lights.ambient / PI * skyFalloff * up * (1.0 + 0.15 * side);
 
@@ -190,6 +214,9 @@ vec3 shade(Surface s, Lights lights, float noise) {
                     * discClarity();
         }
 #endif
+        if (!foliage) {
+            sheen += lights.direct * snowSparkle(s, viewDir) * visibility * skyGate * discClarity();
+        }
 #ifdef FOLIAGE_TRANSLUCENCY
         if (foliage) {
             // Light shining through thin leaves when looking towards the sun.

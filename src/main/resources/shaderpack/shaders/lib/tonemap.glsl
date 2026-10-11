@@ -30,14 +30,31 @@ vec3 hueKeepingCurve(vec3 x) {
 vec3 grade(vec3 color) {
     // Gentle warm white balance: lifts reds, holds back blues. Rain cools it down and takes some colour out - a
     // warm grade turns a grey storm sickly yellow-green.
-    float warmth = WARMTH * (1.0 - 0.85 * rainStrength);
+    float cover = overcast();
+#ifdef WEATHER_GRADING
+    // Each weather has its own light, all of it close to the game's colours:
+    //  - a sun shower: golden sunlight through the rain, a little warmer and richer;
+    //  - after the rain: the air washed clean, colours a touch fuller;
+    //  - snowy land: a crisp, slightly cool white balance; a blizzard drains the colour out of the white-out.
+    float shower = sunShower() * rainStrength;
+    float washed = afterRain();
+    float white = blizzard();
+    float snowLight = snowWeather * (1.0 - 0.5 * cover);
+#else
+    float shower = 0.0;
+    float washed = 0.0;
+    float white = 0.0;
+    float snowLight = 0.0;
+#endif
+    float warmth = WARMTH * (1.0 - 0.85 * cover) * (1.0 + 0.6 * shower) * (1.0 - 0.5 * snowLight);
     vec3 warm = vec3(1.0 + 0.015 * warmth, 1.0 + 0.003 * warmth, 1.0 - 0.02 * warmth);
-    color *= warm * mix(vec3(1.0), vec3(0.97, 1.0, 1.04), rainStrength);
+    color *= warm * mix(vec3(1.0), vec3(0.97, 1.0, 1.04), cover) * mix(vec3(1.0), vec3(0.985, 1.0, 1.03), snowLight);
     float l = luminance(color);
-    float saturation = SATURATION * (1.0 - 0.12 * rainStrength - 0.13 * stormDarkness());
+    float saturation = SATURATION * (1.0 - 0.12 * cover - 0.13 * stormDarkness() - 0.12 * white)
+            * (1.0 + 0.06 * washed + 0.08 * shower);
 #ifdef DIM_OVERWORLD
     // Sunrise and sunset are the most colourful moments of the day.
-    saturation *= 1.0 + 0.12 * twilightAmount(sunElevation()) * (1.0 - rainStrength);
+    saturation *= 1.0 + 0.12 * twilightAmount(sunElevation()) * (1.0 - cover);
 #endif
     color = max(mix(vec3(l), color, saturation), 0.0);
     return color;

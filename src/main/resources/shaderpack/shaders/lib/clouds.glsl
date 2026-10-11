@@ -54,7 +54,7 @@ bool cloudCell(vec2 cell) {
         // Lower coverage keeps only the cells that are clouds in both parts of the texture there.
         return region >= fewer || cloudTexel(cell + CLOUD_RAIN_SHIFT);
     }
-    float extra = saturate(CLOUD_COVERAGE - 1.0) * 0.8 + rainStrength * 0.8 + thunderStrength * 0.2;
+    float extra = saturate(CLOUD_COVERAGE - 1.0) * 0.8 + overcast() * 0.8 + thunderStrength * 0.2;
     if (region < extra && cloudTexel(cell + CLOUD_RAIN_SHIFT)) {
         return true;
     }
@@ -122,8 +122,8 @@ vec3 cloudFaceLight(vec3 n, vec3 lightDir, vec3 directColor, vec3 ambientColor) 
     // darker sky read as holes in it. Grey like vanilla's rain clouds, darker still in a thunderstorm. The overcast
     // ambient / pi is about 1.15 x the zenith radiance of the sky.
     float rainFace = n.y > 0.5 ? 1.1 : (n.y < -0.5 ? 0.5 : 0.66);
-    vec3 overcast = vec3(luminance(ambientColor)) / (PI * 1.15) * rainFace * mix(1.0, 0.7, stormDarkness());
-    return mix(clear, overcast, rainStrength);
+    vec3 grey = vec3(luminance(ambientColor)) / (PI * 1.15) * rainFace * mix(1.0, 0.7, stormDarkness());
+    return mix(clear, grey, overcast());
 }
 
 // A lightning flash lights the clouds from inside, brightest around the bolt.

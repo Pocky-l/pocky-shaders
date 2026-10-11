@@ -36,6 +36,7 @@ uniform float darknessFactor;
 uniform float screenBrightness;
 
 uniform int worldTime;
+uniform int worldDay;
 uniform int moonPhase;
 uniform int isEyeInWater;
 uniform int heldBlockLightValue;
@@ -43,6 +44,15 @@ uniform int heldBlockLightValue2;
 uniform int frameCounter;
 
 uniform ivec2 eyeBrightnessSmooth;
+
+float saturate(float x);
+float hash12(vec2 p);
+float valueNoise(vec2 p);
+
+// Vanilla's wetness; everything else reads "wetness", which becomes Petrichor's when it is linked (modweather.glsl).
+float vanillaWetness() { return wetness; }
+#define wetness modWetness()
+#include "/lib/modweather.glsl"
 
 const float PI = 3.14159265;
 
@@ -91,7 +101,7 @@ float brightnessLift() { return mix(0.5, 2.0, screenBrightness) / 1.25; }
 
 // How clearly the sun (or moon) disc itself shows: highlights mirror the disc, and behind a rain or storm deck there is
 // none to mirror - only the dim light that comes through the clouds, which lights surfaces but makes no glints.
-float discClarity() { return (1.0 - rainStrength) * (1.0 - thunderStrength); }
+float discClarity() { return (1.0 - overcast()) * (1.0 - thunderStrength); }
 
 // 1 in the morning half of the day (midnight to noon: sunrise), 0 in the evening half (sunset). worldTime 0 is 6:00.
 float morning() {

@@ -28,7 +28,7 @@ float moonPhaseLight() {
 // Rain fills the air with droplets: a little more Mie haze in what is left of the clear sky (the overcast model
 // below takes over the sky itself).
 float hazeFactor() {
-    return 1.0 + rainStrength * 2.0;
+    return 1.0 + overcast() * 2.0;
 }
 
 float rayleighPhase(float mu) {
@@ -94,7 +94,7 @@ vec3 scatterAlong(vec3 dir, vec3 lightDir, vec3 illuminance, int steps) {
     float mu = dot(dir, lightDir);
     float haze = hazeFactor();
     float phaseR = rayleighPhase(mu);
-    float phaseM = miePhase(mu, MIE_G * (1.0 - 0.45 * rainStrength));
+    float phaseM = miePhase(mu, MIE_G * (1.0 - 0.45 * overcast()));
 
     vec3 result = vec3(0.0);
     vec2 viewDepth = vec2(0.0);
@@ -130,8 +130,8 @@ vec3 scatterAlong(vec3 dir, vec3 lightDir, vec3 illuminance, int steps) {
 
 // --- Weather ----------------------------------------------------------------------------------------------------
 
-// Brightness of a lightning flash right now (0 without one): a bolt flickers in a few strokes. One value per frame,
-// the same for every pixel.
+// Brightness of a vanilla lightning bolt's flash right now (0 without one): a bolt flickers in a few strokes. One value
+// per frame, the same for every pixel.
 float lightningFlash() {
     if (lightningBoltPosition.w < 0.5) {
         return 0.0;
@@ -142,9 +142,15 @@ float lightningFlash() {
 
 const vec3 FLASH_TINT = vec3(0.8, 0.86, 1.0);
 
-// Sky radiance a flash adds to the cloud deck (zenith value; it follows the overcast shape).
+// Every flash in the sky: vanilla bolts, and with Petrichor its strikes and the distant flashes inside the clouds.
+float skyFlash() {
+    return max(lightningFlash(), modFlash());
+}
+
+// Sky radiance a flash adds to the cloud deck (zenith value; it follows the overcast shape). The ambient light comes
+// from the sky, so the whole land lights up with it.
 vec3 flashSkyRadiance() {
-    return FLASH_TINT * lightningFlash() * 0.9 * rainStrength;
+    return FLASH_TINT * skyFlash() * 0.9 * rainStrength;
 }
 
 // Overcast sky: brightness relative to the zenith value. Rain: a softened CIE overcast sky (the horizon darker than
@@ -157,7 +163,7 @@ float overcastShape(float elevation) {
     // cos-weighted mean of (1 - e)^2 is 1/6: 0.9 - 0.35 / 6 = 0.842.
     float storm = (0.9 - 0.35 * sqr(1.0 - e)) * (0.818 / 0.842);
     float shape = mix(rain, storm, stormDarkness());
-    return mix(shape, 0.818, snowWeather * thunderStrength);
+    return mix(shape, 0.818, blizzard());
 }
 
 // cos-weighted mean of overcastShape over the sky, x the ambient's multiple scattering factor (1.4) x pi.
@@ -174,11 +180,12 @@ float clearDaylight(vec3 sunDir) {
     return day + night;
 }
 
-// Zenith radiance of the overcast deck: rain lets about a fifth of the daylight through, a thunderstorm about a
-// twentieth. Snow clouds are thinner and the white ground lights them from below: a snowy sky stays bright and
-// neutral white, in a blizzard too.
+// Zenith radiance of the overcast deck: rain lets about a fifth of the daylight through (a drizzle's thin deck a third,
+// a downpour's an eighth), a thunderstorm about a twentieth. Snow clouds are thinner and the white ground lights them
+// from below: a snowy sky stays bright and neutral white, in a blizzard too.
 vec3 overcastZenith(vec3 sunDir) {
-    float through = mix(mix(0.2, 0.045, stormDarkness()), 0.3, snowWeather);
+    float rainDeck = min(0.2 * pow(rainHeaviness(), -0.7), 0.33);
+    float through = mix(mix(rainDeck, 0.045, stormDarkness()), 0.3, snowWeather);
     vec3 tint = mix(vec3(0.93, 0.97, 1.05), vec3(0.78, 0.85, 1.0), stormDarkness());
     tint = mix(tint, vec3(0.97, 0.99, 1.03), snowWeather);
     return tint * clearDaylight(sunDir) * through / OVERCAST_IRRADIANCE + flashSkyRadiance();
@@ -252,11 +259,12 @@ vec3 skyRadiance(vec3 dir, vec3 sunDir, int steps) {
     // The low sun's light reaches the sky through the dusty lower air: richer colour than the clean model gives.
     sky = max(mix(vec3(luminance(sky)), sky, 1.0 + 0.2 * twilightNow), 0.0);
     sky += airglow + twilight.rgb;
-    if (rainStrength > 0.0) {
+    float cover = overcast();
+    if (cover > 0.0) {
         // Below the horizon (reflections, fog looking down) the deck's light is what the ground bounces back.
         float shape = dir.y >= 0.0 ? overcastShape(dir.y) : overcastShape(0.0) * 0.8;
-        vec3 overcast = overcastZenith(sunDir) * shape + airglow;
-        sky = mix(sky, overcast, rainStrength);
+        vec3 deck = overcastZenith(sunDir) * shape + airglow;
+        sky = mix(sky, deck, cover);
     }
     return sky;
 }
