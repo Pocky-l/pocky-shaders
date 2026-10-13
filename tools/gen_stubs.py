@@ -42,6 +42,9 @@ PROGRAMS = {
     'dh_terrain': ('dh_terrain.vsh', 'dh_terrain.fsh', [], False),
     'dh_water': ('dh_terrain.vsh', 'dh_terrain.fsh', ['PROG_DH_WATER'], False),
     'dh_shadow': ('dh_shadow.vsh', 'dh_shadow.fsh', [], True),
+    # Colorwheel (Flywheel instances: Create contraptions, ...); the other clrwl_gbuffers_* programs fall back to it.
+    'clrwl_gbuffers': (*LIT, ['PROG_COLORWHEEL'], False),
+    'clrwl_shadow': ('shadow.vsh', 'shadow.fsh', ['PROG_COLORWHEEL'], True),
 }
 
 DIMENSIONS = {'world0': 'DIM_OVERWORLD', 'world-1': 'DIM_NETHER', 'world1': 'DIM_END'}

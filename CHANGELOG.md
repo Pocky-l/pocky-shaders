@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   seconds each, and keeps the first one that runs smoothly (the graphics card has room to spare at about 90 FPS).
   VSync and the frame rate limit are lifted while it measures and put back afterwards. `/shaders preset auto stop`
   cancels it and puts your settings back.
+- [Colorwheel](https://www.curseforge.com/minecraft/mc-mods/colorwheel) support: with
+  [Create](https://www.curseforge.com/minecraft/mc-mods/create) and other mods that draw through Flywheel,
+  contraptions, water wheels, cogs, belts and trains get the pack's sunlight, sky light, torch light and shadows, cast
+  shadows themselves and keep Flywheel's speed. Translucent parts such as train windows blend correctly.
 
 ## [1.0.0] - 2026-10-12
 ### Added

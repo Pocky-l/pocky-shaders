@@ -44,6 +44,16 @@ IRIS_PRELUDE = '''
 #define DH_BLOCK_ILLUMINATED 15
 '''
 
+# Colorwheel injects the material code; a stand-in with the same signature.
+COLORWHEEL_PRELUDE = '''
+void clrwl_computeFragment(vec4 sampleColor, out vec4 fragColor, out vec2 fragLight, out float ao, out vec4 overlayColor) {
+    fragColor = sampleColor;
+    fragLight = vec2(0.5);
+    ao = 1.0;
+    overlayColor = vec4(0.0);
+}
+'''
+
 VARIANTS = [
     {},
     {'QUALITY': '0'},
@@ -106,6 +116,8 @@ def source(stub, settings, options, stage):
     extra = IRIS_PRELUDE
     if options.get('DISTANT_HORIZONS'):
         extra += '#define DISTANT_HORIZONS\n'
+    if stub.name.startswith('clrwl_') and stage == 'fragment':
+        extra += COLORWHEEL_PRELUDE
     if stub.name.startswith('dh_') and stage == 'vertex':
         extra += 'const int dhMaterialId = 0;\n'
     return version + '\n' + extra + '\n'.join(rest)

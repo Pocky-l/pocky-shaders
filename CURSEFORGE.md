@@ -71,6 +71,8 @@ The pack is tuned together with these mods and reads their state live:
 
 [![Distant Horizons](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/compat/distant-horizons.png)](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) ✅ **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons)** (optional) - LOD terrain and water are lit, shadowed and fogged by the pack.
 
+[![Colorwheel](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/compat/colorwheel.png)](https://www.curseforge.com/minecraft/mc-mods/colorwheel) ✅ **[Colorwheel](https://www.curseforge.com/minecraft/mc-mods/colorwheel)** (optional) - with [Create](https://www.curseforge.com/minecraft/mc-mods/create) and other Flywheel mods, contraptions, water wheels, cogs and trains are drawn by Colorwheel with the pack's light and shadows, so they stay fast and still look like the world around them.
+
 ## 📸 Screenshots
 
 ![Caustics in a forest pond with Rustling Leaves](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/screenshots/forest-pond.jpg)

@@ -65,23 +65,38 @@ layout(location = 1) out vec4 outData;
 #endif
 
 void main() {
-    vec4 tex = texture(gtexture, texcoord);
+    // Not named "tex": Colorwheel renames that identifier everywhere (an old Iris name of the block texture).
+    vec4 sampled = texture(gtexture, texcoord);
 #if defined PROG_TERRAIN && SHADOW_STYLE == 1
     vec3 shadowPos = texelCentre(playerPos, texcoord);
 #else
     vec3 shadowPos = playerPos;
 #endif
+    vec2 light = lightmap;
+#if defined PROG_COLORWHEEL
+    // The Flywheel material decides colour, light, cutout and the hurt/white flash; its ambient occlusion is already
+    // in the colour.
+    vec4 color;
+    vec2 materialLight;
+    float materialAo;
+    vec4 overlay;
+    clrwl_computeFragment(sampled, color, materialLight, materialAo, overlay);
+    color.rgb = mix(color.rgb, overlay.rgb, overlay.a);
+    light = saturate((materialLight - 1.0 / 32.0) * 16.0 / 15.0);
+    float ao = 1.0;
+#else
 #if defined PROG_TERRAIN
     // separateAo: the vertex alpha carries vanilla ambient occlusion instead of transparency.
-    vec4 color = vec4(tex.rgb * vertexColor.rgb, tex.a);
+    vec4 color = vec4(sampled.rgb * vertexColor.rgb, sampled.a);
     float ao = vertexColor.a;
 #else
-    vec4 color = tex * vertexColor;
+    vec4 color = sampled * vertexColor;
     float ao = 1.0;
 #endif
     if (color.a < alphaTestRef) {
         discard;
     }
+#endif
 #if defined PROG_ENTITIES
     color.rgb = mix(color.rgb, entityColor.rgb, entityColor.a);
 #endif
@@ -96,7 +111,7 @@ void main() {
     s.playerPos = playerPos;
     s.shadowPos = shadowPos;
     s.normal = n;
-    s.lightmap = lightmap;
+    s.lightmap = light;
     // Vanilla's corner occlusion is strong inside a canopy of full leaf blocks; squared, it turned tree crowns into
     // dark, flat masses.
     s.ao = material == MAT_LEAVES ? mix(1.0, ao, 0.6) : ao * ao;
@@ -118,7 +133,7 @@ void main() {
     outColor = vec4(lit, color.a);
 #if !defined PROG_TEXTURED
     vec3 viewNormal = mat3(gbufferModelView) * n;
-    float encoded = (float(material) * 256.0 + floor(lightmap.y * 255.0 + 0.5)) / 65535.0;
+    float encoded = (float(material) * 256.0 + floor(light.y * 255.0 + 0.5)) / 65535.0;
     outData = vec4(encodeNormal(viewNormal), encoded, 1.0);
 #endif
 }

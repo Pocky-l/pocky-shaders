@@ -1,5 +1,6 @@
 // Vertex shader of every lit opaque gbuffers program (terrain, entities, block entities, hand, particles).
-// The including stub defines one of PROG_TERRAIN, PROG_ENTITIES, PROG_BLOCK, PROG_HAND, PROG_TEXTURED.
+// The including stub defines one of PROG_TERRAIN, PROG_ENTITIES, PROG_BLOCK, PROG_HAND, PROG_TEXTURED, PROG_COLORWHEEL
+// (Colorwheel: Create contraptions and other Flywheel instances; it remaps the gl_* attributes for us).
 
 #include "/lib/common.glsl"
 #include "/lib/wind.glsl"
@@ -70,7 +71,7 @@ void main() {
     }
 #endif
     }
-#elif defined PROG_ENTITIES || defined PROG_BLOCK
+#elif defined PROG_ENTITIES || defined PROG_BLOCK || defined PROG_COLORWHEEL
     material = MAT_ENTITY;
 #elif defined PROG_HAND
     material = MAT_HAND;

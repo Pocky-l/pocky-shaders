@@ -18,6 +18,14 @@ flat in int blockId;
 layout(location = 0) out vec4 outTint;
 
 void main() {
+#if defined PROG_COLORWHEEL
+    // Create contraptions and other Flywheel instances: the material does the colour and the cutout.
+    vec4 color;
+    vec2 materialLight;
+    float materialAo;
+    vec4 overlay;
+    clrwl_computeFragment(texture(gtexture, texcoord), color, materialLight, materialAo, overlay);
+#else
     vec4 color = texture(gtexture, texcoord) * vertexColor;
     if (blockId == ID_WATER || blockId == ID_FLOWING_WATER) {
         // Light keeps most of its strength through shallow water and takes on its colour.
@@ -27,6 +35,7 @@ void main() {
     if (color.a < 0.1) {
         discard;
     }
+#endif
     // Stained glass and similar: coloured light; opaque blocks do not matter (shadowtex1 blocks them anyway).
     outTint = vec4(mix(vec3(1.0), srgbToLinearApprox(color.rgb), color.a), 1.0);
 }

@@ -93,6 +93,8 @@ Nothing to craft: the mod has no items.
 
 [![Distant Horizons](docs/compat/distant-horizons.png)](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) ✅ **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons)** (optional) - LOD terrain and water are lit, shadowed and fogged by the pack.
 
+[![Colorwheel](docs/compat/colorwheel.png)](https://www.curseforge.com/minecraft/mc-mods/colorwheel) ✅ **[Colorwheel](https://www.curseforge.com/minecraft/mc-mods/colorwheel)** (optional) - with [Create](https://www.curseforge.com/minecraft/mc-mods/create) and other Flywheel mods, contraptions, water wheels, cogs and trains are drawn by Colorwheel with the pack's light and shadows, so they stay fast and still look like the world around them.
+
 ## Installation
 
 1. Install [NeoForge](https://neoforged.net) for Minecraft 1.21.1, [Sodium](https://www.curseforge.com/minecraft/mc-mods/sodium)
