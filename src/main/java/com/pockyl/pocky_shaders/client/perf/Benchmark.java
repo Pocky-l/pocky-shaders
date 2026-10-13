@@ -107,7 +107,7 @@ public final class Benchmark {
     }
 
     public static Component start() {
-        if (running()) {
+        if (running() || AutoPreset.running()) {
             return Component.translatable("pocky_shaders.bench.running").withStyle(ChatFormatting.RED);
         }
         if (!ShaderControl.active()) {

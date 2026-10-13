@@ -13,6 +13,7 @@ import com.pockyl.pocky_shaders.pack.BundledPack;
 import com.pockyl.pocky_shaders.pack.PackInstaller;
 import com.pockyl.pocky_shaders.pack.PackProfiles;
 import com.pockyl.pocky_shaders.pack.Preset;
+import com.pockyl.pocky_shaders.pack.PresetChooser;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,6 +32,17 @@ import java.util.stream.Stream;
 @PrefixGameTestTemplate(false)
 public final class ModGameTests {
     private ModGameTests() {
+    }
+
+    @GameTest(template = "empty")
+    public static void autoPresetStepsDownUntilItFits(GameTestHelper helper) {
+        helper.assertTrue(PresetChooser.first() == Preset.ULTRA, "the best preset is tried first");
+        helper.assertTrue(PresetChooser.below(Preset.ULTRA) == Preset.HIGH && PresetChooser.below(Preset.LOW) == null,
+                "then one step lower each time, down to Low");
+        helper.assertTrue(PresetChooser.fits(8.0, true) && !PresetChooser.fits(13.0, true), "GPU time against its target");
+        helper.assertTrue(PresetChooser.fits(13.0, false) && !PresetChooser.fits(20.0, false), "frame time has a looser target");
+        helper.assertFalse(PresetChooser.fits(Double.NaN, true), "no measurement never fits");
+        helper.succeed();
     }
 
     @GameTest(template = "empty")

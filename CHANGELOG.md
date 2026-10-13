@@ -4,6 +4,13 @@ All notable changes to this mod are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - Unreleased
+### Added
+- `/shaders preset auto` finds the best preset for your computer: it tries Ultra, then High, Medium and Low, a few
+  seconds each, and keeps the first one that runs smoothly (the graphics card has room to spare at about 90 FPS).
+  VSync and the frame rate limit are lifted while it measures and put back afterwards. `/shaders preset auto stop`
+  cancels it and puts your settings back.
+
 ## [1.0.0] - 2026-10-12
 ### Added
 - A cosy, natural shader pack for [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders), bundled in the mod:

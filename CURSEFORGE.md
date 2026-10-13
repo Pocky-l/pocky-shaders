@@ -52,7 +52,8 @@ The pack is tuned together with these mods and reads their state live:
   setting.
 - 🔭 **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) support** - distant land and
   water shaded like the near world, with shadows and haze.
-- 🎚️ **Four quality presets** - Low, Medium, High, Ultra - and every effect on its own switch in the Iris menu.
+- 🎚️ **Four quality presets** - Low, Medium, High, Ultra, or `/shaders preset auto` to pick the best one your
+  computer runs smoothly - and every effect on its own switch in the Iris menu.
 
 ## 🎮 Controls
 
@@ -60,7 +61,7 @@ The pack is tuned together with these mods and reads their state live:
 | --- | --- |
 | Shaders on/off | `F6` |
 | Next quality preset | unbound (Controls > Pocky Shaders) |
-| Command | `/shaders on`, `off`, `toggle`, `status`, `preset <low/medium/high/ultra>`, `perf`, `bench` |
+| Command | `/shaders on`, `off`, `toggle`, `status`, `preset <low/medium/high/ultra/auto>`, `perf`, `bench` |
 
 ## 🤝 Compatibility
 

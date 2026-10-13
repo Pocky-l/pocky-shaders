@@ -10,6 +10,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
 import com.pockyl.pocky_shaders.PockyShaders;
+import com.pockyl.pocky_shaders.client.perf.AutoPreset;
 import com.pockyl.pocky_shaders.client.perf.Benchmark;
 import com.pockyl.pocky_shaders.client.perf.PerfMonitor;
 import com.pockyl.pocky_shaders.pack.Preset;
@@ -17,7 +18,7 @@ import com.pockyl.pocky_shaders.pack.Preset;
 import java.util.function.Supplier;
 
 /**
- * Client command {@code /shaders on|off|toggle|status|preset <low|medium|high|ultra>|perf|bench [stop]}.
+ * Client command {@code /shaders on|off|toggle|status|preset <low|medium|high|ultra|auto [stop]>|perf|bench [stop]}.
  */
 @EventBusSubscriber(modid = PockyShaders.MOD_ID, value = Dist.CLIENT)
 public final class ShadersCommand {
@@ -30,6 +31,9 @@ public final class ShadersCommand {
         for (Preset p : Preset.values()) {
             preset.then(Commands.literal(p.id()).executes(ctx -> reply(ctx.getSource(), () -> ShaderControl.setPreset(p))));
         }
+        preset.then(Commands.literal("auto")
+                .executes(ctx -> reply(ctx.getSource(), AutoPreset::start))
+                .then(Commands.literal("stop").executes(ctx -> reply(ctx.getSource(), AutoPreset::stop))));
         event.getDispatcher().register(Commands.literal("shaders")
                 .executes(ctx -> reply(ctx.getSource(), ShaderControl::status))
                 .then(Commands.literal("on").executes(ctx -> reply(ctx.getSource(), ShaderControl::enable)))

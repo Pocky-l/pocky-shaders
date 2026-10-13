@@ -44,7 +44,7 @@ public final class PerfMonitor {
     }
 
     static boolean measuring() {
-        return overlay || Benchmark.running();
+        return overlay || Benchmark.running() || AutoPreset.running();
     }
 
     static void startStep() {
@@ -122,6 +122,7 @@ public final class PerfMonitor {
             }
         }
         Benchmark.statusLine().ifPresent(lines::add);
+        AutoPreset.statusLine().ifPresent(lines::add);
         draw(event.getGuiGraphics(), mc.font, lines);
     }
 

@@ -61,5 +61,8 @@
   "pocky_shaders.bench.step.no_fxaa": "anti-aliasing",
   "pocky_shaders.bench.step.no_water_extras": "caustics and foam",
   "pocky_shaders.bench.step.no_fog_extras": "haze and mist",
-  "pocky_shaders.bench.step.no_waving": "waving plants"
+  "pocky_shaders.bench.step.no_waving": "waving plants",
+  "pocky_shaders.auto.started": "Finding the best preset for this computer: about 15 seconds per preset tried. Stand still; the screen will flicker while presets change.",
+  "pocky_shaders.auto.status": "Auto preset: trying %s - %s",
+  "pocky_shaders.auto.done": "Pocky Shaders: %s quality fits this computer (%s FPS while measuring)"
 }

@@ -61,5 +61,8 @@
   "pocky_shaders.bench.step.no_fxaa": "сглаживание",
   "pocky_shaders.bench.step.no_water_extras": "каустика и пена",
   "pocky_shaders.bench.step.no_fog_extras": "дымка и туман",
-  "pocky_shaders.bench.step.no_waving": "колыхание растений"
+  "pocky_shaders.bench.step.no_waving": "колыхание растений",
+  "pocky_shaders.auto.started": "Подбираю лучший пресет для этого компьютера: около 15 секунд на каждый пресет. Не двигайтесь; экран будет мигать при смене пресетов.",
+  "pocky_shaders.auto.status": "Автопресет: пробую %s - %s",
+  "pocky_shaders.auto.done": "Pocky Shaders: этому компьютеру подходит качество %s (%s FPS при замере)"
 }
