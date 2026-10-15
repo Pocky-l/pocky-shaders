@@ -119,7 +119,7 @@ the same MIT license.
 
 **🎨 Graphics & performance**
 
-[![Turbo for Distant Horizons](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/dhturbo.png)](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons) **[Turbo for Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons)** - Distant Horizons terrain generated many times faster
+[![Turbo for Distant Horizons](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/dhturbo.png)](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons) **[Turbo for Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons)** - Distant Horizons terrain generated several times faster
 
 **⚔️ Gear & gameplay**
 
