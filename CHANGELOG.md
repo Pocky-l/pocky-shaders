@@ -4,7 +4,7 @@ All notable changes to this shader pack are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - Unreleased
+## [2.0.0] - 2026-10-27
 ### Changed
 - Pocky Shaders is now a plain shader pack for [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders) instead
   of a mod: put the zip into `shaderpacks` and pick it in *Video Settings > Shader Packs*. Coming from the mod, remove
