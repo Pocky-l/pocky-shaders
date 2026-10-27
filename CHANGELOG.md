@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mods themselves, so the pack shows their rain, snow and wind without any other mod. Their winds blend smoothly when
   the weather changes, whichever of them are installed.
 - Leaves, flowers, saplings and crops of other mods sway like vanilla ones through the game's block tags.
+- Runs on every Minecraft version from 1.20.1 to 26.3 with Iris, and with
+  [Oculus](https://www.curseforge.com/minecraft/mc-mods/oculus) on Forge 1.20.1. The plants, leaves and lamps of each
+  version are known by name (pale oak, eyeblossoms, dry grass, firefly bushes, copper lanterns and torches, poplars),
+  so they sway and glow everywhere; where Iris or Oculus cannot read block tags, the pack leaves them out.
+
+### Fixed
+- Cave vines and pale hanging moss sway from where they hang; they did not move at all before.
 
 ### Removed
 - What only a mod could do: the `F6` key and the `/shaders` command (Iris' own `K` key toggles the shaders, presets are

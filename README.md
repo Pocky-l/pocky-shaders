@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.minecraft.net"><img alt="Minecraft 1.21.1" src="https://img.shields.io/badge/Minecraft-1.21.1-62B47A"></a>
+  <a href="https://www.minecraft.net"><img alt="Minecraft 1.20.1 - 26.3" src="https://img.shields.io/badge/Minecraft-1.20.1_--_26.3-62B47A"></a>
   <a href="https://www.curseforge.com/minecraft/mc-mods/irisshaders"><img alt="Requires Iris" src="https://img.shields.io/badge/Requires-Iris-5B4FE0"></a>
   <a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/License-MIT-blue"></a>
 </p>
@@ -39,7 +39,7 @@
 
 ## Looks best with my visual mods
 
-The mods hand their weather to the pack themselves while it is on - no extra mod needed. Shader pack authors can read it too: [the data format](https://github.com/Pocky-l/pocky-shaders/blob/main/docs/shader-data.md).
+The mods hand their weather to the pack themselves while it is on - no extra mod needed (their Minecraft 1.21.1 versions; elsewhere the pack shows vanilla weather). Shader pack authors can read it too: [the data format](https://github.com/Pocky-l/pocky-shaders/blob/main/docs/shader-data.md).
 
 [![Petrichor: Rain & Storms](docs/more-mods/petrichor.png)](https://www.curseforge.com/minecraft/mc-mods/petrichor-rain-storms) ✅ **[Petrichor: Rain & Storms](https://www.curseforge.com/minecraft/mc-mods/petrichor-rain-storms)** (1.7.0 or newer) - drizzles, downpours and storms set the sky, light and fog; sun showers, rainbows and wet ground follow its rain; puddles stay still with pixel rain rings; its lightning lights the clouds.
 
@@ -63,6 +63,8 @@ there turns the link to the mods above off.
 
 [![Iris](docs/compat/iris.png)](https://www.curseforge.com/minecraft/mc-mods/irisshaders) ✅ **[Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders)** (required) - the pack runs on Iris; its options are in the Iris shader pack menu.
 
+[![Oculus](docs/compat/oculus.png)](https://www.curseforge.com/minecraft/mc-mods/oculus) ✅ **[Oculus](https://www.curseforge.com/minecraft/mc-mods/oculus)** - the Forge port of Iris for Minecraft 1.20.1 runs the pack too; blocks of other mods sway there only if listed by name (Oculus has no block tags).
+
 [![Sodium](docs/compat/sodium.png)](https://www.curseforge.com/minecraft/mc-mods/sodium) ✅ **[Sodium](https://www.curseforge.com/minecraft/mc-mods/sodium)** - required by Iris, works.
 
 [![Distant Horizons](docs/compat/distant-horizons.png)](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) ✅ **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons)** (optional) - LOD terrain and water are lit, shadowed and fogged by the pack.
@@ -71,7 +73,8 @@ there turns the link to the mods above off.
 
 ## Installation
 
-1. Install [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders) (with [Sodium](https://www.curseforge.com/minecraft/mc-mods/sodium)) for Minecraft 1.21.1.
+1. Install [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders) (with [Sodium](https://www.curseforge.com/minecraft/mc-mods/sodium)) for your Minecraft version, 1.20.1 to 26.3 - or
+   [Oculus](https://www.curseforge.com/minecraft/mc-mods/oculus) on Forge 1.20.1.
 2. Put the zip into the `shaderpacks` folder of your game - do not unzip it.
 3. *Video Settings > Shader Packs*: pick **Pocky Shaders**.
 
