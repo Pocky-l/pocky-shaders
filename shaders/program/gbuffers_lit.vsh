@@ -33,8 +33,10 @@ void main() {
 
 #if defined PROG_TERRAIN
     int id = int(mc_Entity.x + 0.5);
-    // at_midBlock.w is the block's light emission: every light source glows, modded ones included.
+    // at_midBlock.w is the block's light emission: every light source glows, modded ones included - a faint one
+    // (a machine with a little light) only faintly, so the curve is steep.
     emissive = at_midBlock.w / 15.0;
+    emissive *= emissive;
     if (id == ID_PLANT || id == ID_PLANT_LOWER || id == ID_PLANT_UPPER || id == ID_EMISSIVE_PLANT || id == ID_LILY) {
         material = MAT_PLANT;
     } else if (id == ID_LEAVES || id == ID_VINE) {

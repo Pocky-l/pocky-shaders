@@ -100,7 +100,7 @@ void main() {
     if (dhMaterial == DH_BLOCK_LAVA) {
         lit = lit * 0.15 + lavaGlow(albedo, playerPos + cameraPosition);
     } else if (dhMaterial == DH_BLOCK_ILLUMINATED) {
-        lit += emission(albedo, 3.0, true) * 0.8;
+        lit += emission(albedo, 3.0, true, 1.0) * 0.8;
     }
     outColor = vec4(lit, 1.0);
     float encoded = (float(s.material) * 256.0 + floor(lm.y * 255.0 + 0.5)) / 65535.0;

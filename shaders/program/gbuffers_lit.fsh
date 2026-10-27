@@ -127,7 +127,11 @@ void main() {
         // Molten rock lit by daylight looked like orange paint: it is almost all its own glow.
         lit = lit * 0.15 + lavaGlow(s.albedo, playerPos + cameraPosition);
     } else {
-        lit += emission(s.albedo, 3.0, material == MAT_EMISSIVE) * emissive;
+        // How much the texel outshines its texture: the coarsest mip level is the texture's average (with mipmaps off it
+        // is the texel itself, and only known light blocks glow).
+        vec3 average = textureLod(gtexture, texcoord, 4.0).rgb;
+        float standOut = max(sampled.r, max(sampled.g, sampled.b)) / max(max(average.r, max(average.g, average.b)), 0.05);
+        lit += emission(s.albedo, 3.0, material == MAT_EMISSIVE, standOut) * emissive;
     }
 
     outColor = vec4(lit, color.a);

@@ -289,11 +289,13 @@ vec3 shade(Surface s, Lights lights, float noise) {
 }
 
 // Glow of light-emitting blocks. Known light blocks glow over most of their texture; any other light source (a modded
-// one, a furnace) only in its brightest texels, so the stone of a lit furnace does not glow with its fire.
+// one, a furnace) only in texels that are bright AND stand out from the rest of their texture (`standOut` = the texel
+// over its texture's average, 1 for known blocks), so the stone of a lit furnace does not glow with its fire and a
+// modded machine's light metal does not glow with its crystal.
 // The glow keeps a deeper, richer colour than the texture (lava a glowing orange, not a pale salmon once it is bright).
-vec3 emission(vec3 albedo, float strength, bool wholeBlock) {
+vec3 emission(vec3 albedo, float strength, bool wholeBlock, float standOut) {
     float m = max(albedo.r, max(albedo.g, albedo.b));
-    float mask = wholeBlock ? smoothstep(0.08, 0.7, m) : smoothstep(0.4, 0.85, m);
+    float mask = wholeBlock ? smoothstep(0.08, 0.7, m) : smoothstep(0.4, 0.85, m) * smoothstep(1.15, 1.6, standOut);
     vec3 rich = pow(albedo / max(m, 1e-4), vec3(1.5)) * m;
     return rich * mask * strength;
 }
