@@ -4,6 +4,15 @@ All notable changes to this shader pack are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-10-27
+### Fixed
+- The game crashed a few seconds after entering a world on Minecraft 1.21.5 and newer (26.x included). From 1.21.5 on
+  the clouds keep their vanilla look with a cloud pattern of the pack's own instead of the game's cloud texture, and
+  the weather of [Petrichor](https://www.curseforge.com/minecraft/mc-mods/petrichor-rain-storms),
+  [Hoarfrost](https://www.curseforge.com/minecraft/mc-mods/hoarfrost-snow-blizzards) and
+  [Rustling Leaves](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves) is read only on the versions those
+  mods exist for.
+
 ## [2.0.0] - 2026-10-27
 ### Changed
 - Pocky Shaders is now a plain shader pack for [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders) instead

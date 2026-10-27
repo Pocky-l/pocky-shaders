@@ -34,11 +34,34 @@ vec2 cloudOffset() {
     return vec2(frameTimeCounter * CLOUD_SPEED, CLOUD_CELL * 0.33);
 }
 
+#if MC_VERSION >= 12105
+// Value noise whose lattice repeats every `period` points, so a pattern built from it repeats every 256 cells.
+float tiledNoise(vec2 p, float period, float seed) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    float a = hash12(mod(i, period) + seed);
+    float b = hash12(mod(i + vec2(1.0, 0.0), period) + seed);
+    float c = hash12(mod(i + vec2(0.0, 1.0), period) + seed);
+    float d = hash12(mod(i + vec2(1.0, 1.0), period) + seed);
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+#endif
+
 // Cloud texture at a cell. Vanilla maps the texture to 256 x 256 cells whatever its resolution.
 bool cloudTexel(vec2 cell) {
+#if MC_VERSION >= 12105
+    // No cloud texture from 1.21.5 on (shaders.properties): an own pattern of the same kind - blobs a few cells
+    // across with ragged edges, about a third of the sky, repeating every 256 cells like the texture (the drift wraps
+    // by exactly one repeat per hour).
+    vec2 c = floor(cell) + 0.5;
+    float shape = tiledNoise(c / 4.0, 64.0, 0.0) * 0.7 + tiledNoise(c / 2.0, 128.0, 57.0) * 0.3;
+    return shape > 0.56;
+#else
     ivec2 size = textureSize(cloudtex, 0);
     vec2 uv = mod(cell, 256.0) / 256.0;
     return texelFetch(cloudtex, ivec2(uv * vec2(size)), 0).a > 0.5;
+#endif
 }
 
 // Share of the sky where rain adds cells (and where a lower coverage option takes some away). It grows over broad,

@@ -2,9 +2,12 @@
 of option combinations (quality presets, features off, with and without Distant Horizons).
 
 Usage: python tools/preview/compile_check.py [path/to/glslang.exe]
+The Minecraft version Iris reports is 12101 (1.21.1); set the environment variable MC_VERSION (e.g. 260300 for 26.3)
+to check the code paths of another version.
 With glslang (the Khronos reference compiler) every variant is also checked strictly, catching what lenient drivers
 accept but others reject.
 """
+import os
 import pathlib
 import re
 import subprocess
@@ -17,7 +20,7 @@ from glsl import SHADERS, INCLUDE
 
 # Macros and built-ins Iris provides that a plain GL driver does not know.
 IRIS_PRELUDE = '''
-#define MC_VERSION 12101
+#define MC_VERSION ''' + os.environ.get('MC_VERSION', '12101') + '''
 #define MC_RENDER_STAGE_NONE 0
 #define MC_RENDER_STAGE_SKY 1
 #define MC_RENDER_STAGE_SUNSET 2

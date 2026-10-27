@@ -5,6 +5,11 @@
 // too old to publish or the option is off: Iris then binds its missing texture, which never carries the marker in
 // texel 0. Included by common.glsl.
 
+// Before 1.21.5 only (shaders.properties): newer versions get no mod textures, so their weather stays vanilla.
+#if MC_VERSION >= 12105
+#undef MOD_WEATHER
+#endif
+
 uniform sampler2D petrichorData;
 uniform sampler2D hoarfrostData;
 uniform sampler2D leavesData;
