@@ -1,40 +1,10 @@
 # Pocky Shaders
 
-**A cosy, natural shader pack that sets itself up** - soft shadows, living water and foliage, juicy sunrises and
-weather you can feel, while the game still looks like Minecraft. Quality presets and a one-key toggle.
+**A cosy, natural shader pack for Iris** - soft shadows, living water and foliage, juicy sunrises and weather you can feel, while the game still looks like Minecraft. Shows the weather of my rain, snow and leaves mods.
 
 ![A lake village at noon: clear water, reflections and soft haze](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/screenshots/lake.jpg)
 
-📦 **Requires** [NeoForge](https://neoforged.net) 1.21.1 and [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders)
-(with [Sodium](https://www.curseforge.com/minecraft/mc-mods/sodium)) · client only
-
-## 🧩 Why a mod and not a shader pack?
-
-The pack inside is an ordinary Iris shader pack. Shipping it as a mod adds what a pack on its own cannot do:
-
-- 📥 **Installs itself** - on launch the mod puts the pack into `shaderpacks` and turns it on (unless you already use
-  another pack). Updates arrive through the CurseForge app like any mod, and a modpack can depend on it.
-- 🌿 **Knows your modded blocks** - a shader pack only recognises the block IDs written into it by hand. The mod scans
-  every installed block at launch and adds leaves, plants, vines and bright lamps from all your mods, so they wave and
-  glow like vanilla ones.
-- 🌦️ **Reads the weather of other mods** - a pack only sees vanilla rain and thunder. The mod passes the rain type,
-  wind, lightning flashes and rainbows of [Petrichor](https://www.curseforge.com/minecraft/mc-mods/petrichor-rain-storms),
-  the blizzard strength of [Hoarfrost](https://www.curseforge.com/minecraft/mc-mods/hoarfrost-snow-blizzards) and the
-  gusts of [Rustling Leaves](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves) to the shaders.
-- 🎮 **In-game controls** - `F6` turns the shaders on and off, a key and `/shaders preset` switch the quality, and
-  `/shaders perf` and `/shaders bench` show what each effect costs on your computer.
-
-## 💞 Looks best with my visual mods
-
-The pack is tuned together with these mods and reads their state live:
-
-[![Petrichor: Rain & Storms](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/petrichor.png)](https://www.curseforge.com/minecraft/mc-mods/petrichor-rain-storms) ✅ **[Petrichor: Rain & Storms](https://www.curseforge.com/minecraft/mc-mods/petrichor-rain-storms)** - drizzles, downpours and storms set the sky, light and fog; puddles stay still with pixel rain rings; its rainbows and lightning light the clouds.
-
-[![Hoarfrost: Snow & Blizzards](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/hoarfrost.png)](https://www.curseforge.com/minecraft/mc-mods/hoarfrost-snow-blizzards) ✅ **[Hoarfrost: Snow & Blizzards](https://www.curseforge.com/minecraft/mc-mods/hoarfrost-snow-blizzards)** - blizzards stay bright, not dark: the haze closes in with the storm's visibility and gusts, and the flakes and snow cover take on the pack's light.
-
-[![Rustling Leaves](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/rustling_leaves.png)](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves) ✅ **[Rustling Leaves](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves)** - grass and crowns sway with the same gust waves that blow the leaves; leaves and litter are shaded like the blocks around them.
-
-[![Turbo for Distant Horizons](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/dhturbo.png)](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons) ✅ **[Turbo for Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons)** - the distant land fills in fast, and the pack gives it shadows, water and haze.
+📦 **Requires** [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders) (with [Sodium](https://www.curseforge.com/minecraft/mc-mods/sodium)) · Minecraft 1.21.1 · put the zip into `shaderpacks`
 
 ## ✨ Features
 
@@ -45,33 +15,56 @@ The pack is tuned together with these mods and reads their state live:
   height adjustable.
 - 🌊 **Living water** - refraction, reflections of the world and sky, sun glitter, caustics, shore foam, foaming
   waterfalls, lamp light glowing in the water, a darker sea far from the shore.
-- 🌾 **Waving grass and leaves** with light shining through them.
+- 🌾 **Waving grass and leaves** with light shining through them - also the leaves, flowers, saplings and crops of
+  other mods, which join through the game's block tags.
 - ⛈️ **Weather you can feel** - a grey overcast in rain, dark thunderstorms with lightning lighting the clouds, wet
   ground with puddle patches, rainbows after rain, mist in valleys and swamps.
 - 🔥 **Warm block light** - flickering torches, glowing lava that looks hot, caves that follow the game's Brightness
   setting.
-- 🔭 **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) support** - distant land and
-  water shaded like the near world, with shadows and haze.
-- 🎚️ **Four quality presets** - Low, Medium, High, Ultra, or `/shaders preset auto` to pick the best one your
-  computer runs smoothly - and every effect on its own switch in the Iris menu.
+- 🔭 **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) support** - distant land and water shaded like the near world, with shadows and haze.
+- 🎚️ **Four quality presets** - Low, Medium, High, Ultra on the Profile button, and every effect on its own switch in
+  the shader pack settings.
+
+## 💞 Looks best with my visual mods
+
+The mods hand their weather to the pack themselves while it is on - no extra mod needed. Shader pack authors can read it too: [the data format](https://github.com/Pocky-l/pocky-shaders/blob/main/docs/shader-data.md).
+
+[![Petrichor: Rain & Storms](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/petrichor.png)](https://www.curseforge.com/minecraft/mc-mods/petrichor-rain-storms) ✅ **[Petrichor: Rain & Storms](https://www.curseforge.com/minecraft/mc-mods/petrichor-rain-storms)** (1.7.0 or newer) - drizzles, downpours and storms set the sky, light and fog; sun showers, rainbows and wet ground follow its rain; puddles stay still with pixel rain rings; its lightning lights the clouds.
+
+[![Hoarfrost: Snow & Blizzards](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/hoarfrost.png)](https://www.curseforge.com/minecraft/mc-mods/hoarfrost-snow-blizzards) ✅ **[Hoarfrost: Snow & Blizzards](https://www.curseforge.com/minecraft/mc-mods/hoarfrost-snow-blizzards)** (1.4.0 or newer) - blizzards stay bright, not dark: the haze closes in with the storm's visibility and gusts, and the flakes and snow cover take on the pack's light.
+
+[![Rustling Leaves](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/rustling_leaves.png)](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves) ✅ **[Rustling Leaves](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves)** (2.6.0 or newer) - grass and crowns sway with the same gust waves that blow the leaves; leaves and litter are shaded like the blocks around them.
+
+[![Turbo for Distant Horizons](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/dhturbo.png)](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons) ✅ **[Turbo for Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons)** - the distant land fills in fast, and the pack gives it shadows, water and haze.
 
 ## 🎮 Controls
 
-| Action | Default |
-| --- | --- |
-| Shaders on/off | `F6` |
-| Next quality preset | unbound (Controls > Pocky Shaders) |
-| Command | `/shaders on`, `off`, `toggle`, `status`, `preset <low/medium/high/ultra/auto>`, `perf`, `bench` |
+Iris' own keys: `K` turns the shaders on and off, `R` reloads them, `O` opens the shader pack list.
+
+## ⚙️ Configuration
+
+*Video Settings > Shader Packs > Pocky Shaders > Shader Pack Settings*: the quality preset (Profile) and every effect
+(lighting, nature, water, sky, weather, post-processing), each on its own switch or slider. *Weather from Pocky Mods*
+there turns the link to the mods above off.
 
 ## 🤝 Compatibility
 
-[![Iris](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/compat/iris.png)](https://www.curseforge.com/minecraft/mc-mods/irisshaders) ✅ **[Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders)** (required) - the pack runs on Iris; its own options stay in the Iris shader pack menu.
+[![Iris](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/compat/iris.png)](https://www.curseforge.com/minecraft/mc-mods/irisshaders) ✅ **[Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders)** (required) - the pack runs on Iris; its options are in the Iris shader pack menu.
 
 [![Sodium](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/compat/sodium.png)](https://www.curseforge.com/minecraft/mc-mods/sodium) ✅ **[Sodium](https://www.curseforge.com/minecraft/mc-mods/sodium)** - required by Iris, works.
 
 [![Distant Horizons](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/compat/distant-horizons.png)](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) ✅ **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons)** (optional) - LOD terrain and water are lit, shadowed and fogged by the pack.
 
 [![Colorwheel](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/compat/colorwheel.png)](https://www.curseforge.com/minecraft/mc-mods/colorwheel) ✅ **[Colorwheel](https://www.curseforge.com/minecraft/mc-mods/colorwheel)** (optional) - with [Create](https://www.curseforge.com/minecraft/mc-mods/create) and other Flywheel mods, contraptions, water wheels, cogs and trains are drawn by Colorwheel with the pack's light and shadows, so they stay fast and still look like the world around them.
+
+## 📥 Installation
+
+1. Install [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders) (with [Sodium](https://www.curseforge.com/minecraft/mc-mods/sodium)) for Minecraft 1.21.1.
+2. Put the zip into the `shaderpacks` folder of your game - do not unzip it.
+3. *Video Settings > Shader Packs*: pick **Pocky Shaders**.
+
+Coming from the old Pocky Shaders mod (1.x)? Remove `pocky_shaders-*.jar` from `mods`; the `shaderpacks/Pocky Shaders`
+folder it installed can be deleted.
 
 ## 📸 Screenshots
 
@@ -97,8 +90,7 @@ The pack is tuned together with these mods and reads their state live:
 
 ## 💛 Credits
 
-Made by **Pocky** · [source code](https://github.com/Pocky-l/pocky-shaders) · the shader pack inside is released under
-the same MIT license.
+Made by **Pocky** · [source code](https://github.com/Pocky-l/pocky-shaders) · released under the MIT license.
 
 <!-- more-mods:start -->
 ## More mods by Pocky

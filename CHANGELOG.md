@@ -1,8 +1,25 @@
 # Changelog
 
-All notable changes to this mod are documented in this file.
+All notable changes to this shader pack are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.0.0] - Unreleased
+### Changed
+- Pocky Shaders is now a plain shader pack for [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders) instead
+  of a mod: put the zip into `shaderpacks` and pick it in *Video Settings > Shader Packs*. Coming from the mod, remove
+  `pocky_shaders-*.jar` from `mods`; the `shaderpacks/Pocky Shaders` folder it installed can be deleted.
+- The weather of [Petrichor](https://www.curseforge.com/minecraft/mc-mods/petrichor-rain-storms) (1.7.0 or newer),
+  [Hoarfrost](https://www.curseforge.com/minecraft/mc-mods/hoarfrost-snow-blizzards) (1.4.0 or newer) and
+  [Rustling Leaves](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves) (2.6.0 or newer) now comes from those
+  mods themselves, so the pack shows their rain, snow and wind without any other mod. Their winds blend smoothly when
+  the weather changes, whichever of them are installed.
+- Leaves, flowers, saplings and crops of other mods sway like vanilla ones through the game's block tags.
+
+### Removed
+- What only a mod could do: the `F6` key and the `/shaders` command (Iris' own `K` key toggles the shaders, presets are
+  on the Profile button of the shader pack settings), automatic preset selection, the performance overlay and the
+  benchmark.
 
 ## [1.1.0] - 2026-10-13
 ### Added

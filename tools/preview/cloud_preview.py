@@ -2,7 +2,7 @@
 
 Usage: python tools/preview/cloud_preview.py <out.png> [sun_elevation_deg] [rain] [thunder] [worldTime]
 The clouds read the game's cloud texture, taken from the Minecraft resources jar ModDevGradle leaves in
-build/moddev/artifacts (run a build once). The light colours are computed the way the prepare pass bakes them.
+build/moddev/artifacts of any 1.21.1 mod in the workspace (build one of them once). The light colours are computed the way the prepare pass bakes them.
 """
 import io
 import math
@@ -93,10 +93,10 @@ VIEWS = [  # camera height, pitch (deg), yaw (deg; 0 = +z, the sun is towards +z
 
 
 def cloud_texture():
-    root = pathlib.Path(__file__).resolve().parents[2]
-    jars = sorted((root / 'build' / 'moddev' / 'artifacts').glob('*minecraft-resources.jar'))
+    workspace = pathlib.Path(__file__).resolve().parents[4]
+    jars = sorted(workspace.glob('mods/*/build/moddev/artifacts/*minecraft-resources.jar'))
     if not jars:
-        raise SystemExit('Minecraft resources jar not found in build/moddev/artifacts - run a build first')
+        raise SystemExit('Minecraft resources jar not found in mods/*/build/moddev/artifacts - build a mod first')
     with zipfile.ZipFile(jars[-1]) as z:
         return Image.open(io.BytesIO(z.read('assets/minecraft/textures/environment/clouds.png'))).convert('RGBA')
 

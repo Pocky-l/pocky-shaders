@@ -14,7 +14,7 @@ float fogOpticalDepth(float dist, float rainSheets) {
     // distance here, from a light veil in flurries to a white-out a few blocks away in a heavy blizzard.
     float visibility = snowVisibility();
     if (visibility > 0.0) {
-        float gust = mix(1.0, clamp(modTexel(4).z, 0.6, 1.8), 0.5);
+        float gust = mix(1.0, clamp(snowGust(), 0.6, 1.8), 0.5);
         float hoarfrost = snowAmount() * 3.0 / (visibility * 1.15) * gust * rainSheets * max(dist - 4.0, 0.0);
         precipitation = mix(precipitation, hoarfrost, snowWeather);
     }

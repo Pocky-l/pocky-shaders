@@ -67,7 +67,7 @@ const int MAT_ENTITY = 6;
 const int MAT_HAND = 7;
 const int MAT_PARTICLE = 8;
 
-// block.properties ids (mc_Entity.x); the mod regenerates the file with modded blocks added to the same ids.
+// block.properties ids (mc_Entity.x); modded blocks join them through block tags there.
 const int ID_PLANT = 10001;         // single-block plants: grass, flowers, saplings, crops
 const int ID_PLANT_LOWER = 10002;   // lower half of tall plants
 const int ID_PLANT_UPPER = 10003;   // upper half of tall plants

@@ -1,39 +1,14 @@
-# Gradle
-.gradle/
+# Build output (tools/build_pack.py)
 build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/**/build/
 
-# IntelliJ IDEA
+# Python
+__pycache__/
+
+# IDEs
 .idea/
-*.iws
-*.iml
-*.ipr
-out/
-!**/src/**/out/
-.run/
-
-# Eclipse / VS Code
-.apt_generated
-.classpath
-.eclipse/
-.factorypath
-.project
-.settings
-bin/
-!**/src/**/bin/
 .vscode/
+*.iml
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Minecraft
-run/
-run-data/
-run-server/
-!**/src/**/run/
-**/src/generated/**/.cache/
-repo/
-!**/src/**/repo/
-logs/

@@ -6,7 +6,7 @@ shaders/program. Run after adding or renaming a program: python tools/gen_stubs.
 import pathlib
 import shutil
 
-SHADERS = pathlib.Path(__file__).resolve().parents[1] / 'src' / 'main' / 'resources' / 'shaderpack' / 'shaders'
+SHADERS = pathlib.Path(__file__).resolve().parents[1] / 'shaders'
 VERSION = '#version 330 compatibility'
 
 LIT = ('gbuffers_lit.vsh', 'gbuffers_lit.fsh')

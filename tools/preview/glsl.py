@@ -2,7 +2,7 @@
 import pathlib
 import re
 
-SHADERS = pathlib.Path(__file__).resolve().parents[2] / 'src' / 'main' / 'resources' / 'shaderpack' / 'shaders'
+SHADERS = pathlib.Path(__file__).resolve().parents[2] / 'shaders'
 INCLUDE = re.compile(r'^\s*#include\s+"([^"]+)"\s*$')
 
 
