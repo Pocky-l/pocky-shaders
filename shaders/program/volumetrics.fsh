@@ -27,18 +27,20 @@ float bayer4(vec2 p) {
     return (m[i] + 0.5) / 16.0;
 }
 
-// Scattering in the air at a height, per block: a thin haze that thickens in the cool, humid morning and evening, after
-// a rain, over swamps and rivers, around sunrise, and most of all in a morning fog.
-float airDensity(float y, float sunY) {
-    float h = y - 63.0;
+// Scattering in the air at a height above the haze layer's base (see hazeBase), per block: a faint clear-air haze,
+// and close to the ground a thicker one - in the cool, humid morning and evening, after a rain, over swamps and
+// rivers, around sunrise, and most of all in a morning fog. The sunbeams show in the low layer, not all over the sky.
+float airDensity(float y, float base, float sunY) {
+    float h = y - base;
     float humid = mix(3.0, 1.0, smoothstep(0.08, 0.45, sunY)) * (1.0 + 1.5 * afterRain()) * (1.0 + mistBiome);
-    float haze = 0.00012 * exp(-max(h, -20.0) * 0.015) * humid;
-    float dawn = dawnHaze() * 0.0015 * exp(-max(h, -20.0) * 0.02);
-    float fog = foggyMorning() * MORNING_FOG_DENSITY * FOG_DENSITY * exp(-max(h, -8.0) * MORNING_FOG_FALLOFF);
-    return (haze + dawn + fog) * (1.0 - 0.85 * rainStrength);
+    float clear = 0.00003 * exp(-max(y - 63.0, -20.0) * 0.01);
+    float haze = 0.00025 * exp(-max(h, -6.0) * 0.12) * humid;
+    float dawn = dawnHaze() * 0.0025 * exp(-max(h, -6.0) * 0.1);
+    float fog = foggyMorning() * MORNING_FOG_DENSITY * 0.6 * FOG_DENSITY * exp(-max(h, -6.0) * MORNING_FOG_FALLOFF);
+    return (clear + haze + dawn + fog) * (1.0 - 0.85 * rainStrength);
 }
 
-vec3 airLight(vec3 dir, float dist, float jitter) {
+vec3 airLight(vec3 dir, float dist, float base, float jitter) {
     vec3 l = lightDirection();
     vec3 light = directLightColor();
     if (dot(light, vec3(1.0)) < 1e-3) {
@@ -47,7 +49,8 @@ vec3 airLight(vec3 dir, float dist, float jitter) {
     // Half desaturated: the light scattered in the air is paler than the low sun itself.
     light = mix(vec3(luminance(light)), light, 0.6);
     float mu = dot(dir, l);
-    float phase = 0.6 * miePhase(mu, 0.72) + 0.4 / (4.0 * PI);
+    // Mostly forward: the beams show looking towards the sun; to the sides the fog stays a soft, dim veil.
+    float phase = 0.75 * miePhase(mu, 0.75) + 0.25 / (4.0 * PI);
     float sunY = sunDirection().y;
     float reach = min(dist, shadowDistance * 0.7);
     const int STEPS = VOLUMETRIC_STEPS;
@@ -61,7 +64,7 @@ vec3 airLight(vec3 dir, float dist, float jitter) {
         float dt = t - prev;
         prev = t;
         vec3 p = dir * t;
-        float density = airDensity(cameraPosition.y + p.y, sunY);
+        float density = airDensity(cameraPosition.y + p.y, base, sunY);
         if (density <= 0.0) {
             continue;
         }
@@ -69,7 +72,9 @@ vec3 airLight(vec3 dir, float dist, float jitter) {
         sum += density * lit * exp(-opticalDepth) * dt;
         opticalDepth += density * dt;
     }
-    return light * phase * sum * VOLUMETRIC_STRENGTH;
+    // Like the fog itself, the glow never covers the view: at most about the light of the clear sky's horizon.
+    vec3 glow = light * phase * sum * VOLUMETRIC_STRENGTH;
+    return glow / (1.0 + luminance(glow) * 1.6);
 }
 
 // Under water: light coming down through the waves into the water, broken into moving columns by the same focusing
@@ -123,7 +128,8 @@ void main() {
         // Only where the eye sees the sky: no sunbeams inside a cave from the shadow map's edge.
         float eyeSky = smoothstep(0.1, 0.5, float(eyeBrightnessSmooth.y) / 240.0);
         if (eyeSky > 0.0) {
-            outLight = vec4(airLight(dir, dist, jitter) * eyeSky, 1.0);
+            float base = depth >= 1.0 ? cameraPosition.y - 1.62 : hazeBase(playerPos);
+            outLight = vec4(airLight(dir, dist, base, jitter) * eyeSky, 1.0);
         }
     }
 #endif
