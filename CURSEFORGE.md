@@ -19,8 +19,10 @@
   other mods, which join through the game's block tags.
 - ⛈️ **Weather you can feel** - a grey overcast in rain, dark thunderstorms with lightning lighting the clouds, wet
   ground with puddle patches, rainbows after rain, mist in valleys and swamps.
+- 🧱 **Real materials** - every block takes the light by the relief of its own texture; metals shine and mirror the
+  sky in their own colour, polished stone and glazed blocks reflect the world, dirt and sand stay matte.
 - 🔥 **Warm block light** - flickering torches, glowing lava that looks hot, caves that follow the game's Brightness
-  setting.
+  setting; a hazy Nether and a lit End close to vanilla's.
 - 🔭 **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) support** - distant land and water shaded like the near world, with shadows and haze.
 - 🎚️ **Four quality presets** - Low, Medium, High, Ultra on the Profile button, and every effect on its own switch in
   the shader pack settings.

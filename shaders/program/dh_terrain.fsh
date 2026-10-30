@@ -93,9 +93,11 @@ void main() {
     s.playerPos = playerPos;
     s.shadowPos = playerPos;
     s.normal = n;
+    s.faceNormal = n;
     s.lightmap = lm;
     s.ao = 1.0;
     s.material = leaves ? MAT_LEAVES : MAT_DEFAULT;
+    setFinish(s, dhMaterial == DH_BLOCK_METAL ? blockFinish(ID_METAL) : blockFinish(0));
     vec3 lit = shade(s, frameLights(), 0.5);
     if (dhMaterial == DH_BLOCK_LAVA) {
         lit = lit * 0.15 + lavaGlow(albedo, playerPos + cameraPosition);
@@ -104,6 +106,6 @@ void main() {
     }
     outColor = vec4(lit, 1.0);
     float encoded = (float(s.material) * 256.0 + floor(lm.y * 255.0 + 0.5)) / 65535.0;
-    outData = vec4(encodeNormal(mat3(gbufferModelView) * n), encoded, 1.0);
+    outData = vec4(encodeNormal(mat3(gbufferModelView) * n), encoded, 0.0);
 #endif
 }

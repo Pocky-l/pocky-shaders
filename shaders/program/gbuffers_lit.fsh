@@ -26,6 +26,37 @@ in vec3 worldNormal;
 flat in int material;
 flat in float emissive;
 flat in int lava;
+flat in vec3 finish;
+flat in vec4 spriteBounds;
+
+#if defined PROG_TERRAIN && defined GENERATED_NORMALS
+// Height of a texel of the block texture for the generated relief: its brightness - light texels stand out, dark
+// cracks, gaps and joints sink in, the way the textures are painted. Transparent texels have none (-1).
+float reliefHeight(vec2 texel) {
+    vec4 c = texelFetch(gtexture, ivec2(spriteBounds.xy + mod(texel, spriteBounds.zw)), 0);
+    return c.a < 0.1 ? -1.0 : luminance(c.rgb);
+}
+
+// The slope of the relief at the texel under uv, along the texture's u and v (central differences, wrapped inside
+// the sprite so neighbouring sprites of the atlas never leak in). One value per texel: the light breaks up pixel by
+// pixel like the texture itself instead of a smooth bump.
+vec2 reliefSlope(vec2 uv) {
+    vec2 t = floor(uv * vec2(textureSize(gtexture, 0)) - spriteBounds.xy);
+    float h = reliefHeight(t);
+    if (h < 0.0) {
+        return vec2(0.0);
+    }
+    float l = reliefHeight(t - vec2(1.0, 0.0));
+    float r = reliefHeight(t + vec2(1.0, 0.0));
+    float d = reliefHeight(t - vec2(0.0, 1.0));
+    float u = reliefHeight(t + vec2(0.0, 1.0));
+    l = l < 0.0 ? h : l;
+    r = r < 0.0 ? h : r;
+    d = d < 0.0 ? h : d;
+    u = u < 0.0 ? h : u;
+    return vec2(r - l, u - d) * 0.5;
+}
+#endif
 
 #if defined PROG_TERRAIN && SHADOW_STYLE == 1
 // Position of the centre of the texture texel this fragment belongs to (found through the screen-space derivatives of
@@ -105,12 +136,35 @@ void main() {
     if (!gl_FrontFacing && material != MAT_PARTICLE) {
         n = -n;
     }
+    vec3 faceNormal = n;
+#if defined PROG_TERRAIN && defined GENERATED_NORMALS
+    // Generated normals: the texture's own relief tilts the normal texel by texel, so stone, dirt, wood and bricks
+    // take the light like rough, grainy surfaces instead of smooth painted plastic. The texture directions in the
+    // world come from the derivatives of position and texture coordinate (taken outside any branch).
+    vec3 dpx = dFdx(playerPos);
+    vec3 dpy = dFdy(playerPos);
+    vec2 duvx = dFdx(texcoord);
+    vec2 duvy = dFdy(texcoord);
+    float reliefFade = (1.0 - smoothstep(16.0, 40.0, length(playerPos))) * GENERATED_NORMAL_STRENGTH;
+    if (spriteBounds.z > 0.0 && reliefFade > 0.0) {
+        vec3 px = cross(dpy, n);
+        vec3 py = cross(n, dpx);
+        vec3 tangent = px * duvx.x + py * duvy.x;
+        vec3 bitangent = px * duvx.y + py * duvy.y;
+        float scale = inversesqrt(max(max(dot(tangent, tangent), dot(bitangent, bitangent)), 1e-20));
+        vec2 slope = reliefSlope(texcoord) * 2.5 * reliefFade;
+        // Shiny blocks are smooth: only a hint of relief, or their highlights and reflections broke into noise.
+        slope *= mix(1.0, 0.35, 1.0 - smoothstep(0.3, 0.6, finish.x));
+        n = normalize(n - (tangent * slope.x + bitangent * slope.y) * scale);
+    }
+#endif
 
     Surface s;
     s.albedo = srgbToLinear(color.rgb);
     s.playerPos = playerPos;
     s.shadowPos = shadowPos;
     s.normal = n;
+    s.faceNormal = faceNormal;
     s.lightmap = light;
     // Vanilla's corner occlusion is strong inside a canopy of full leaf blocks; squared, it turned tree crowns into
     // dark, flat masses.
@@ -121,6 +175,7 @@ void main() {
     s.lightmap.y = max(s.lightmap.y, float(eyeBrightnessSmooth.y) / 240.0);
 #endif
     s.material = material;
+    setFinish(s, finish);
 
     vec3 lit = shade(s, frameLights(), dither(gl_FragCoord.xy));
     if (lava == 1) {
@@ -136,8 +191,10 @@ void main() {
 
     outColor = vec4(lit, color.a);
 #if !defined PROG_TEXTURED
-    vec3 viewNormal = mat3(gbufferModelView) * n;
+    vec3 viewNormal = mat3(gbufferModelView) * faceNormal;
     float encoded = (float(material) * 256.0 + floor(light.y * 255.0 + 0.5)) / 65535.0;
-    outData = vec4(encodeNormal(viewNormal), encoded, 1.0);
+    // Only glossy finishes are reflected in the composite pass.
+    float glossy = finish.x < 0.6 && material != MAT_HAND ? 1.0 : 0.0;
+    outData = vec4(encodeNormal(viewNormal), encoded, encodeGloss(finish.y * glossy, finish.x, finish.z));
 #endif
 }

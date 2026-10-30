@@ -18,7 +18,9 @@ float sceneExposure() {
     float target = 1.75 * mix(1.0, 0.62, gloom * (1.0 - 0.7 * snowWeather)) * mix(1.0, 0.36, stormDarkness());
     // At sunrise and sunset the eye keeps the bright sky from washing out: deep colours over darker land.
     target *= 1.0 - 0.45 * twilightAmount(sunDirection().y);
-    float outdoor = clamp(pow(target / max(key, 1e-3), 0.5), 0.9, 3.2);
+    // At night the eye adapts only part of the way: a night must stay a night, with the torches standing out (3.2 made
+    // a moonlit field look like an overcast evening).
+    float outdoor = clamp(pow(target / max(key, 1e-3), 0.5), 0.9, 2.4);
 #else
     float outdoor = 1.0;
 #endif

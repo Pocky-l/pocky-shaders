@@ -24,6 +24,11 @@ const float shadowIntervalSize = 16.0;
 #define SSAO_STRENGTH 1.0 // [0.5 0.75 1.0 1.25 1.5 2.0]
 #define HANDHELD_LIGHT
 #define SURFACE_SHEEN
+// Blocks take the light by the relief of their own texture (texel by texel), not as flat painted faces.
+#define GENERATED_NORMALS
+#define GENERATED_NORMAL_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
+// Polished stone, glazed blocks, gems and metals mirror the sky and the world around them.
+#define GLOSSY_REFLECTIONS
 #define BLOCK_LIGHT_WARMTH 1.0 // [0.0 0.5 1.0 1.5]
 // How strongly bright light is compressed towards vanilla's light map (0 = physical light: a lime noon).
 #define LIGHT_RESPONSE 0.75 // [0.0 0.25 0.5 0.75 1.0 1.25 1.5]
@@ -89,6 +94,10 @@ const float shadowIntervalSize = 16.0;
 #ifdef HANDHELD_LIGHT
 #endif
 #ifdef SURFACE_SHEEN
+#endif
+#ifdef GENERATED_NORMALS
+#endif
+#ifdef GLOSSY_REFLECTIONS
 #endif
 #ifdef WAVING_PLANTS
 #endif

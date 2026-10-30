@@ -7,6 +7,9 @@
 
 in vec4 mc_Entity;
 in vec4 at_midBlock;
+in vec2 mc_midTexCoord;
+
+uniform sampler2D gtexture;
 
 out vec2 texcoord;
 out vec2 lightmap;
@@ -16,6 +19,11 @@ out vec3 worldNormal;
 flat out int material;
 flat out float emissive;
 flat out int lava;
+// See blockFinish().
+flat out vec3 finish;
+// The block texture's sprite in the atlas, in atlas texels: xy its first texel, zw its size (generated normals read
+// the texels around a fragment and wrap them inside the sprite). zw = 0: no relief for this geometry.
+flat out vec4 spriteBounds;
 
 void main() {
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
@@ -30,6 +38,8 @@ void main() {
     material = MAT_DEFAULT;
     emissive = 0.0;
     lava = 0;
+    finish = blockFinish(0);
+    spriteBounds = vec4(0.0);
 
 #if defined PROG_TERRAIN
     int id = int(mc_Entity.x + 0.5);
@@ -51,6 +61,20 @@ void main() {
     } else if (id == ID_EMISSIVE_PLANT) {
         emissive = max(emissive, 0.6);
     }
+    finish = material == MAT_DEFAULT ? blockFinish(id) : vec3(material == MAT_LEAVES ? 0.75 : 1.0, 0.02, 0.0);
+    if (material == MAT_PLANT || material == MAT_EMISSIVE) {
+        finish.y = 0.0;
+    }
+#ifdef GENERATED_NORMALS
+    if (material == MAT_DEFAULT) {
+        // The sprite around mc_midTexCoord: a vertex of a full face sits half a sprite from its centre; vertices of
+        // smaller parts (slabs, torches) sit closer, so the size is rounded up to a power of two, at least 16 texels.
+        vec2 atlas = vec2(textureSize(gtexture, 0));
+        vec2 halfTexels = abs(texcoord - mc_midTexCoord) * atlas;
+        float halfSize = max(8.0, exp2(ceil(log2(max(max(halfTexels.x, halfTexels.y), 1.0)) - 0.01)));
+        spriteBounds = vec4(floor(mc_midTexCoord * atlas + 0.5) - halfSize, vec2(2.0 * halfSize));
+    }
+#endif
 
     vec3 worldPos = playerPos + cameraPosition;
     // 0 at the bottom of the block, 1 at its top (at_midBlock points from the vertex to the block centre, in 1/64).
@@ -77,10 +101,13 @@ void main() {
     }
 #elif defined PROG_ENTITIES || defined PROG_BLOCK || defined PROG_COLORWHEEL
     material = MAT_ENTITY;
+    finish = vec3(0.8, 0.02, 0.0);
 #elif defined PROG_HAND
     material = MAT_HAND;
+    finish = vec3(0.8, 0.02, 0.0);
 #elif defined PROG_TEXTURED
     material = MAT_PARTICLE;
+    finish = vec3(1.0, 0.0, 0.0);
     worldNormal = -normalize(playerPos + vec3(0.0, 1e-3, 0.0));
 #endif
 

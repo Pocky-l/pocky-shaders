@@ -132,6 +132,13 @@ vec4 groundMist(vec3 dir, float dist, float strength) {
 }
 #endif
 
+#ifndef DIM_OVERWORLD
+// The game's fog colour of the Nether and the End, as bright on screen as in vanilla (whatever the eye adapts to).
+vec3 dimensionFogColor() {
+    return srgbToLinear(fogColor) * 0.72 / sceneExposure();
+}
+#endif
+
 // Fog for a surface at playerPos (relative to the camera). Returns the scene colour with fog applied.
 vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     float dist = length(playerPos);
@@ -190,7 +197,8 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
         float surfaceHaze = layerPath * 0.0008 * weather * banks * smoothstep(fade.x, fade.y, dist);
         hazeAmount = (1.0 - exp(-surfaceHaze)) * sheltered;
         // Thickest in the cool morning and evening air, thinnest around noon; swamps and rivers are always misty.
-        float humidity = mix(1.3, 0.55, smoothstep(0.15, 0.6, sunDir.y)) * (1.0 + 0.8 * mistBiome) * (1.0 - 0.6 * snowWeather);
+        // (At noon the banks over far forests looked like smoke in the clear midday air.)
+        float humidity = mix(1.3, 0.25, smoothstep(0.15, 0.6, sunDir.y)) * (1.0 + 0.8 * mistBiome) * (1.0 - 0.6 * snowWeather);
         mist = groundMist(dir, dist, weather * humidity);
         // Never a solid wall: the land shows through even the thickest bank.
         mist = vec4(mist.rgb * 0.8 * sheltered, 1.0 - (1.0 - mist.a) * 0.8 * sheltered);
@@ -254,7 +262,16 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     color = mix(color, fogCol, saturate(amount));
 #else
     float amount = smoothstep(renderDistance * 0.2, renderDistance, dist);
-    color = mix(color, srgbToLinear(fogColor) * 0.6, amount);
+#ifdef DIM_NETHER
+    // The Nether's thick haze is part of its look: the game's own fog distances (from a twentieth of the view
+    // distance, gone into the haze by half of it, at most 96 blocks), a little thinner so lava falls still glow
+    // through it. Without it the caverns were a black, busy maze. (Computed here: the fog uniforms Iris passes do not
+    // reach the composite passes.)
+    float fogStart = far * 0.05;
+    float fogEnd = min(far, 192.0) * 0.5 * 1.25;
+    amount = max(amount, pow(saturate((dist - fogStart) / (fogEnd - fogStart)), 0.85) * 0.95);
+#endif
+    color = mix(color, dimensionFogColor(), amount);
 #endif
     return color;
 }

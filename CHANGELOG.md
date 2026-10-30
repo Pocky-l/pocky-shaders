@@ -4,6 +4,28 @@ All notable changes to this shader pack are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-10-30
+### Added
+- Block materials: blocks take the light by the relief of their own texture, texel by texel, so stone, dirt, wood and
+  bricks look rough and grainy instead of smooth and flat. Metals (iron, gold, copper, netherite) shine and mirror the
+  sky in their own colour; polished stone, quartz, concrete, glazed terracotta and gems catch the sun and reflect the
+  world around them; dirt, sand, gravel, snow and wool stay fully matte. New options: Texture Relief (with depth) and
+  Glossy Reflections.
+### Changed
+- Blocks keep their form at noon: the sunlit sides of a block are clearly darker than its top again, like in vanilla
+  (they were almost as bright, which made blocks look flat and plastic). Shade stays as soft as before.
+- Nights are darker and calmer: a deep blue night sky instead of a light grey one, dim moonlit clouds, and torches
+  that stand out.
+- The Nether has vanilla's thick haze again (with lava still glowing through it) and is no longer a near-black maze;
+  the End is lit about as brightly as in vanilla.
+- Shallow water keeps vanilla's blue instead of turning into a milky white pane over sand; caustics are softer and
+  only under the sun.
+- No smoky mist banks over distant forests at noon (the mist stays in the morning and evening); the daytime sky is a
+  little bluer.
+### Fixed
+- Blizzards, snowy-biome weather and swamp mist never switched on: the two weather values the pack reads from the
+  game were written in a form Iris ignored.
+
 ## [2.0.3] - 2026-10-30
 ### Fixed
 - Black blocks over the screen on Minecraft 26.1.2 with [Rustling Leaves](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves)

@@ -14,6 +14,7 @@ uniform sampler2D colortex7;
 #include "/lib/water.glsl"
 
 uniform sampler2D colortex0;
+uniform sampler2D colortex1;
 uniform sampler2D colortex2;
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
@@ -136,6 +137,61 @@ vec4 screenReflection(vec3 viewPos, vec3 viewDir, float noise, out vec3 hitView)
 }
 #endif
 
+#ifdef GLOSSY_REFLECTIONS
+// Polished stone, glazed blocks, gems and metals (blockFinish) mirror their surroundings: the sky where they see it,
+// the world itself through screen-space reflections, and - where neither reaches, deep in a cave - simply their own
+// colour, so they never turn darker than vanilla. A dielectric only shows a faint reflection head-on and more at a
+// grazing angle (Fresnel); a metal reflects strongly, in its own colour. Rougher finishes get a weaker, sky-only
+// reflection (a sharp mirror image on a rough surface looked like glass).
+vec3 glossyReflection(vec3 color, vec2 uv) {
+    vec4 data = texture(colortex1, uv);
+    vec3 gloss = decodeGloss(data.w);
+    if (gloss.x <= 0.0) {
+        return color;
+    }
+    vec3 viewPos = viewPosition(uv, true);
+    float dist = length(viewPos);
+    vec3 n = decodeNormal(data.xy);
+    vec3 v = viewPos / max(dist, 1e-4);
+    float skyLight = mod(floor(data.z * 65535.0 + 0.5), 256.0) / 255.0;
+    float smoothness = sqr(1.0 - gloss.y);
+    vec3 rv = reflect(v, n);
+    float metal = gloss.z;
+    // A metal's diffuse light was held back to three quarters in the gbuffers (lighting.glsl): its own colour as
+    // the fallback reflection makes up for it.
+    vec3 own = color / (1.0 - 0.25 * metal);
+#ifdef DIM_OVERWORLD
+    vec3 rw = mat3(gbufferModelViewInverse) * rv;
+    // Rays heading down see the ground, darker than the sky at the horizon.
+    vec3 skyRefl = sampleSkyLut(normalize(vec3(rw.x, max(rw.y, 0.02), rw.z)), sunDirection())
+            * mix(0.3, 1.0, smoothstep(-0.25, 0.05, rw.y));
+    skyRefl = vanillaLightResponse(skyRefl);
+#elif defined DIM_NETHER
+    vec3 skyRefl = dimensionFogColor();
+#else
+    vec3 skyRefl = own;
+#endif
+    vec3 env = mix(own, skyRefl, smoothstep(0.3, 0.9, skyLight));
+#if WATER_REFLECTIONS == 2 && SSR_STEPS > 0
+    float ssrWeight = (1.0 - smoothstep(0.25, 0.5, gloss.y)) * (1.0 - smoothstep(48.0, 96.0, dist));
+    if (ssrWeight > 0.0) {
+        vec3 hitView;
+        vec4 hit = screenReflection(viewPos + n * 0.02, rv, 0.5, hitView);
+        env = mix(env, hit.rgb, hit.a * ssrWeight);
+    }
+#endif
+    float nv = saturate(dot(n, -v));
+    if (metal > 0.5) {
+        // The hue of the lit metal itself tints what it reflects.
+        vec3 tint = own / max(max(own.r, max(own.g, own.b)), 1e-4);
+        float weight = gloss.x * (0.45 + 0.55 * smoothness);
+        return mix(color, env * mix(tint, vec3(1.0), pow(1.0 - nv, 5.0)), weight);
+    }
+    float fresnel = fresnelSchlick(nv, gloss.x) * (0.25 + 0.75 * smoothness);
+    return mix(color, env, fresnel);
+}
+#endif
+
 // Faint light every water keeps in the dark, neutral and a little cool: an amber floor (the torch colour, with no
 // torch near) dyed streams and waterfalls in a dark cave brown.
 const vec3 WATER_DARK_LIGHT = vec3(0.011, 0.013, 0.015);
@@ -243,9 +299,11 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
             vec3 l = lightDirection();
             // The pattern belongs to the surface the light came through.
             vec2 p = (floorPlayer + cameraPosition).xz + l.xz / max(l.y, 0.25) * depthBelow;
+            // Only the sun focuses visible veins (moonlight drew bright lines on the night pool floor).
             float caustics = waterCaustics(p) * fade * smoothstep(0.1, 0.35, l.y) * (1.0 - rainStrength)
+                    * smoothstep(0.0, 0.1, sunDirection().y)
                     * smoothstep(0.5, 0.9, sky) * cloudShadow(surfacePlayer, l);
-            below *= 1.0 + caustics * 1.5;
+            below *= 1.0 + caustics * 0.8;
         }
     }
 #endif
@@ -301,8 +359,25 @@ vec3 shadeWater(vec3 color, vec3 surfaceView, vec4 waterData, vec2 uv, float nor
         vec3 scatterColor = light * mix(mix(shallowScatter, deepScatter, smoothstep(3.0, 18.0, waterDist)), seaScatter, sea);
         // Churned storm water turns slate grey-green.
         scatterColor = mix(scatterColor, vec3(luminance(scatterColor)) * vec3(0.8, 1.0, 1.0), 0.5 * thunderStrength);
+        // The game's water colour (the biome tint) filters what shows through, as on vanilla's water texture: by
+        // absorption alone a one-block pool over sand was a clear, almost white pane.
+        vec3 tintFilter = sqrt(srgbToLinear(tint) / max(max(tint.r, max(tint.g, tint.b)), 0.05));
+        float tintAmount = puddle ? 0.15 : 0.4 + 0.3 * (1.0 - exp(-waterDist * 0.6));
+        below *= mix(vec3(1.0), tintFilter, tintAmount);
         result = below * transmit + scatterColor * (1.0 - exp(-waterDist * 0.4 / WATER_CLARITY));
         result *= mix(0.7, 1.0, smoothstep(0.1, 0.8, waterDist));
+        if (!running && !puddle) {
+            // Shallow water keeps some of vanilla's own colour, the biome tint lit like a block: over light sand a
+            // one-block pool was a milky white pane next to the game's clear blue. Deep water is coloured by its depth.
+#ifdef DIM_OVERWORLD
+            vec3 bodyLight = (ambientLightColor() + directLightColor() * saturate(lightDirection().y)) / PI * sky;
+#else
+            vec3 bodyLight = vec3(0.05);
+#endif
+            bodyLight = vanillaLightResponse(bodyLight + WATER_DARK_LIGHT) + blockGlow;
+            float share = 0.35 * (1.0 - smoothstep(1.5, 8.0, waterDist));
+            result = mix(result, srgbToLinear(tint) * 0.55 * bodyLight, share);
+        }
         // The lamp's light scattered in the water: warm near it, turning the water's own blue-green with depth (the
         // red goes first). A puddle's film is too thin to glow - the lit ground shows through it.
         vec3 glowColor = mix(vec3(1.0), vec3(0.45, 0.8, 0.85) * mix(vec3(1.0), srgbToLinear(tint) * 1.5, 0.3),
@@ -481,6 +556,11 @@ void main() {
 
     vec4 waterData = texture(colortex4, texcoord);
     float normalSpread = length(fwidth(decodeWaterNormal(waterData.xy)));
+#ifdef GLOSSY_REFLECTIONS
+    if (!isOpaqueSkyAt(texcoord) && waterData.w < 0.5 && isEyeInWater == 0) {
+        color = glossyReflection(color, texcoord);
+    }
+#endif
     if (waterData.w > 0.5) {
         color = shadeWater(color, surfaceView, waterData, texcoord, normalSpread);
     }
@@ -514,6 +594,12 @@ void main() {
 #endif
         color = mix(color, applyFog(color, playerPos, renderDistance), cloudTransmittance);
     }
+#ifdef DIM_NETHER
+    else {
+        // Beyond the loaded caverns the Nether is all haze (nothing draws a sky there).
+        color = dimensionFogColor();
+    }
+#endif
     color = applyBlindnessFog(color, sky ? 1000.0 : dist);
     vec4 particles = texture(colortex8, texcoord);
     color = color * (1.0 - particles.a) + particles.rgb;

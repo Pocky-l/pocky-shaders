@@ -127,7 +127,10 @@ vec3 cloudFaceLight(vec3 n, vec3 lightDir, vec3 directColor, vec3 ambientColor) 
     // Faces the sun shines on get all of it (warm sides at sunset); light scattered through the cloud reaches the
     // others too.
     float sun = 0.35 + 0.65 * saturate(dot(n, lightDir));
-    vec3 clear = (ambientColor * 1.05 + directColor * sun) / PI * face;
+    // At night only a faint moonlit grey, a little lighter than the dark sky (lit by the night's ambient floor they
+    // were pale grey shapes on a light sky).
+    float night = smoothstep(0.05, -0.1, sunDirection().y);
+    vec3 clear = (ambientColor * 1.05 * mix(1.0, 0.45, night) + directColor * sun) / PI * face;
     // High up the clouds still catch the low sun when the land is already in its shadow: at sunset and through the
     // twilight they glow orange and pink.
     vec3 sunDir = sunDirection();

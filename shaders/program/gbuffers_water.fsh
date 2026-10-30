@@ -92,9 +92,12 @@ void main() {
     s.playerPos = playerPos;
     s.shadowPos = playerPos;
     s.normal = n;
+    s.faceNormal = n;
     s.lightmap = lightmap;
     s.ao = 1.0;
     s.material = MAT_GLASS;
+    // Glass and ice are smooth: a small, sharp sun glint on top of the sky they mirror.
+    setFinish(s, vec3(0.12, 0.04, 0.0));
     vec3 lit = shade(s, frameLights(), dither(gl_FragCoord.xy));
 
 #ifdef DIM_OVERWORLD

@@ -6,11 +6,22 @@ struct Surface {
     vec3 albedo;        // linear
     vec3 playerPos;     // relative to the camera, world axes
     vec3 shadowPos;     // where the shadow is looked up: the centre of the texture texel (pixel shadows), else playerPos
-    vec3 normal;        // world space
+    vec3 normal;        // world space, with the texture's relief (generated normals)
+    vec3 faceNormal;    // world space normal of the face itself (shadow offsets)
     vec2 lightmap;      // x: block light, y: sky light, both 0..1
     float ao;           // vanilla ambient occlusion
     int material;
+    float roughness;    // see blockFinish(): 0 mirror .. 1 chalk
+    float f0;           // reflectance at normal incidence (a metal: of its own colour)
+    float metal;        // 1 for metals
 };
+
+// The finish of a surface (see blockFinish), set on a Surface.
+void setFinish(inout Surface s, vec3 finish) {
+    s.roughness = finish.x;
+    s.f0 = finish.y;
+    s.metal = finish.z;
+}
 
 struct Lights {
     vec3 direct;        // sun/moon colour, 0 when it is below the horizon
@@ -73,23 +84,26 @@ float roughDiffuse(float nl, float nv, float lh, float roughness) {
     return mix(1.0, light * view, 0.5);
 }
 
-// Roughness of the sun's reflection on a material (no reflection on plants: their quads have no real surface normal).
-// Dirt, stone, wood and wool are very rough: anything glossier made the world look like plastic toy cubes.
-float sheenRoughness(int material) {
-    if (material == MAT_LEAVES) {
-        return 0.75;
+// Reflectance of a surface for light arriving along l, seen from v: a dielectric mirrors white light (F0 0.02..0.07),
+// a metal mirrors in its own colour.
+vec3 surfaceFresnel(Surface s, float cosTheta) {
+    vec3 f0 = vec3(s.f0);
+    if (s.metal > 0.5) {
+        f0 = s.albedo / max(max(s.albedo.r, max(s.albedo.g, s.albedo.b)), 0.05) * s.f0;
     }
-    if (material == MAT_ENTITY || material == MAT_HAND) {
-        return 0.8;
-    }
-    return 0.9;
+    return f0 + (1.0 - f0) * pow(1.0 - saturate(cosTheta), 5.0);
 }
 
-// The sun mirrored by the surface itself. Rough matte surfaces show no highlight from above, only a soft glare at
-// grazing angles when looking towards a low sun (the Fresnel rise; F0 0.02 keeps the rest invisible).
-float sunSheen(vec3 n, vec3 v, vec3 l, float roughness) {
+// The sun mirrored by the surface itself, by its finish (blockFinish): rough matte blocks show no highlight from
+// above, only a faint glare when looking towards a low sun; dirt, sand and wool none at all (a glare on the ground
+// made it look like plastic); polished stone and glazed blocks a small bright spot; metals a broad glint in their own
+// colour. With the texture's relief the highlight breaks up texel by texel like the pixels of the texture.
+vec3 sunHighlight(Surface s, vec3 v, vec3 l) {
+    if (s.f0 <= 0.0) {
+        return vec3(0.0);
+    }
     vec3 h = normalize(v + l);
-    return ggxSpecular(n, v, l, roughness) * fresnelSchlick(dot(v, h), 0.02);
+    return ggxSpecular(s.normal, v, l, s.roughness) * surfaceFresnel(s, dot(v, h));
 }
 
 // The game's look: light fills up like vanilla's light map, the full sun brings a surface to about its texture colour
@@ -163,9 +177,19 @@ vec3 shade(Surface s, Lights lights, float noise) {
     ambient += lights.direct * saturate(l.y) * 0.15 * vec3(0.95, 1.0, 0.85) * groundView / PI * skyFalloff;
 
     ambient += vec3(AMBIENT_MIN) * vec3(0.8, 0.9, 1.1) * brightnessLift() + nightVision * vec3(0.25);
+#if defined DIM_NETHER
+    // The Nether is never as dark as a cave: the glow of its lava seas hangs in the air, a dull warm light everywhere
+    // (vanilla lifts its light map there as well). Without it netherrack and the forests were a near-black mass.
+    ambient += vec3(1.0, 0.8, 0.68) * 0.04 * brightnessLift();
+#elif defined DIM_END
+    // The End is lit by a pale light without a source (vanilla brightens its whole light map there); without it the
+    // end stone was a dark olive, three times darker than the game's.
+    ambient += vec3(0.98, 1.0, 1.02) * 0.052 * brightnessLift();
+#else
     // Deep in caves a faint cool fill keeps the shapes of the rock readable in the dark (vanilla's dark is never
     // pitch black either); the warm firelight stands out against it.
     ambient += vec3(0.55, 0.7, 1.0) * 0.02 * brightnessLift() * (1.0 - smoothstep(0.0, 0.5, sky));
+#endif
 
     // The Brightness option also lifts weak block light the way vanilla's gamma does, so torches reach farther into
     // the dark at higher settings (1 - (1 - x)^3 at most halfway).
@@ -181,7 +205,9 @@ vec3 shade(Surface s, Lights lights, float noise) {
     // How much of the sun reaches the surface (shadow, cloud shadow, sky gate), 0..1.
     float sunLit = 0.0;
 #ifdef DIM_OVERWORLD
-    float nl = dot(s.normal, l);
+    // The texture's relief shades a face texel by texel, but never lights a face turned away from the light.
+    float faceNl = dot(s.faceNormal, l);
+    float nl = faceNl > 0.0 ? dot(s.normal, l) : faceNl;
     float diffuse;
     if (s.material == MAT_PLANT || s.material == MAT_PARTICLE) {
         diffuse = 0.55 + 0.25 * abs(nl);
@@ -201,7 +227,7 @@ vec3 shade(Surface s, Lights lights, float noise) {
 #ifdef SHADOWS
 #ifdef SHADOW_LOOKUP
         bool pixelLock = s.material != MAT_ENTITY && s.material != MAT_HAND && s.material != MAT_PARTICLE;
-        visibility = shadowVisibility(s.shadowPos, s.normal, noise, foliage, pixelLock);
+        visibility = shadowVisibility(s.shadowPos, s.faceNormal, noise, foliage, pixelLock);
 #endif
 #endif
         // Shade is never black: a little of the sun reaches it, like the soft, light shade of the vanilla look.
@@ -212,9 +238,10 @@ vec3 shade(Surface s, Lights lights, float noise) {
         direct = lights.direct / PI * diffuse * visibility * skyGate;
         sunLit = luminance(visibility) * skyGate;
 #ifdef SURFACE_SHEEN
-        if (s.material != MAT_PLANT && s.material != MAT_PARTICLE && nl > 0.0) {
-            sheen = lights.direct * sunSheen(s.normal, viewDir, l, sheenRoughness(s.material)) * visibility * skyGate
-                    * discClarity();
+        if (s.material != MAT_PLANT && s.material != MAT_PARTICLE && dot(s.faceNormal, l) > 0.0) {
+            sheen = lights.direct * sunHighlight(s, viewDir, l) * visibility * skyGate * discClarity();
+            // Bright, but never a blinding blob: a shiny metal face in line with the sun was 30x its own diffuse light.
+            sheen /= 1.0 + luminance(sheen) * 0.15;
         }
 #endif
         if (!foliage) {
@@ -239,8 +266,18 @@ vec3 shade(Surface s, Lights lights, float noise) {
     }
 #endif
 
-    // The sheen is reflected light: white, not tinted by the albedo.
-    vec3 color = s.albedo * vanillaLightResponse((ambient + block) * s.ao + direct) + sheen;
+    // The light is compressed towards vanilla's light map (vanillaLightResponse), but mostly by how much light this
+    // spot gets as a whole - its sky light, block light and whether the sun reaches it - and only partly by the angle
+    // of the face: compressing each face by its own light made the sunlit sides of a block nearly as bright as its
+    // top (0.85 of it, vanilla shades them 0.6..0.8), so blocks lost their form and looked flat and plastic at noon.
+    // Shade keeps its soft, light look: there the reference is the shade itself.
+    vec3 total = (ambient + block) * s.ao + direct;
+    vec3 reference = (ambient + block) * s.ao + lights.direct / PI * sunLit;
+    vec3 response = total / (1.0 + (0.35 * luminance(total) + 0.65 * luminance(reference)) * LIGHT_RESPONSE);
+    // The sheen is reflected light: white, not tinted by the albedo. A metal's colour is mostly what it reflects
+    // (added in the composite pass, see composite.fsh glossyReflection), its diffuse part is weaker - kept at three
+    // quarters: vanilla's metal textures already paint the shine in.
+    vec3 color = s.albedo * response * (1.0 - 0.25 * s.metal) + sheen;
 
 #if defined WET_SURFACES && defined DIM_OVERWORLD
     // Rain darkens exposed surfaces; water stays as a glossy film only in the hollows.

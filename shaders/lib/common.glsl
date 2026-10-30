@@ -81,6 +81,48 @@ const int ID_FLOWING_WATER = 10024;
 const int ID_ICE = 10021;
 const int ID_GLASS = 10022;
 const int ID_LAVA = 10023;
+const int ID_METAL = 10030;         // iron, gold, netherite, fresh copper: blocks and metal parts
+const int ID_PATINA = 10031;        // weathered and oxidized copper
+const int ID_POLISHED = 10032;      // polished stone, quartz, concrete, glazed terracotta, obsidian
+const int ID_GEM = 10033;           // diamond, emerald, amethyst, lapis, redstone blocks
+const int ID_GROUND = 10034;        // dirt, sand, gravel, snow, wool: matte through and through
+
+// How a block's surface takes the light: x roughness (0 = mirror, 1 = chalk), y reflectance at normal incidence (F0
+// of a dielectric; for a metal the strength of its own coloured reflection), z 1 for metals. The game's textures were
+// painted for flat, matte light, so even the shiny blocks stay well short of a real mirror: they catch the sun and
+// show the sky and the world faintly, the rest of them keeps its vanilla look.
+vec3 blockFinish(int id) {
+    if (id == ID_METAL) {
+        return vec3(0.42, 0.65, 1.0);
+    }
+    if (id == ID_PATINA) {
+        return vec3(0.72, 0.25, 1.0);
+    }
+    if (id == ID_POLISHED) {
+        return vec3(0.32, 0.04, 0.0);
+    }
+    if (id == ID_GEM) {
+        return vec3(0.26, 0.07, 0.0);
+    }
+    if (id == ID_GROUND) {
+        return vec3(1.0, 0.0, 0.0);
+    }
+    // Stone, wood, bricks and the rest: rough and matte.
+    return vec3(0.9, 0.02, 0.0);
+}
+
+// Reflection data for the composite pass in the fourth channel of colortex1: how strongly the surface mirrors its
+// surroundings (0..1, 8 bits), its roughness (7 bits) and whether it is a metal (its reflection takes its colour).
+float encodeGloss(float weight, float roughness, float metal) {
+    return (floor(saturate(weight) * 255.0 + 0.5) * 256.0 + floor(saturate(roughness) * 127.0 + 0.5)
+            + step(0.5, metal) * 128.0) / 65535.0;
+}
+
+vec3 decodeGloss(float data) {
+    float v = floor(data * 65535.0 + 0.5);
+    float low = mod(v, 256.0);
+    return vec3(floor(v / 256.0) / 255.0, mod(low, 128.0) / 127.0, step(128.0, low));
+}
 
 // Beyond these distances (blocks) effects nobody can make out are skipped.
 const float ANIMATION_DISTANCE = 64.0;

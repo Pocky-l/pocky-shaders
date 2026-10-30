@@ -246,7 +246,9 @@ vec4 twilightGlow(vec3 dir, vec3 sunDir) {
 // deck.
 vec3 skyRadiance(vec3 dir, vec3 sunDir, int steps) {
     vec3 sky = scatterAlong(dir, sunDir, vec3(SUN_ILLUMINANCE), steps);
-    sky += scatterAlong(dir, -sunDir, MOON_TINT * MOON_ILLUMINANCE * moonPhaseLight(), steps / 2 + 1);
+    // The moon lights the land, but the sky around it stays a deep, dark blue: with its full share the night sky came
+    // out a light grey-blue, brighter than a vanilla dusk.
+    sky += scatterAlong(dir, -sunDir, MOON_TINT * MOON_ILLUMINANCE * moonPhaseLight(), steps / 2 + 1) * 0.35;
     vec3 airglow = vec3(0.0016, 0.0022, 0.0038) * (1.0 + 2.0 * saturate(dir.y));
     vec4 twilight = twilightGlow(dir, sunDir);
     sky *= SKY_RADIANCE_SCALE * (1.0 - twilight.w);
@@ -255,9 +257,10 @@ vec3 skyRadiance(vec3 dir, vec3 sunDir, int steps) {
     // close to white. Single scattering alone reddens it there: a thin brownish band along the horizon by day and
     // night. Sunset keeps its own colours.
     float horizon = exp(-max(dir.y, 0.0) / 0.04) * (1.0 - twilightNow);
-    sky = mix(sky, vec3(luminance(sky)) * vec3(0.97, 1.0, 1.04), horizon * 0.75);
-    // The low sun's light reaches the sky through the dusty lower air: richer colour than the clean model gives.
-    sky = max(mix(vec3(luminance(sky)), sky, 1.0 + 0.2 * twilightNow), 0.0);
+    sky = mix(sky, vec3(luminance(sky)) * vec3(0.97, 1.0, 1.04), horizon * 0.6);
+    // The low sun's light reaches the sky through the dusty lower air: richer colour than the clean model gives. By
+    // day a touch more blue than the model as well: next to vanilla's deep blue it looked washed out.
+    sky = max(mix(vec3(luminance(sky)), sky, 1.12 + 0.2 * twilightNow), 0.0);
     sky += airglow + twilight.rgb;
     float cover = overcast();
     if (cover > 0.0) {
