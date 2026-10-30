@@ -35,7 +35,9 @@ void main() {
     int id = int(mc_Entity.x + 0.5);
     // at_midBlock.w is the block's light emission: every light source glows, modded ones included - a faint one
     // (a machine with a little light) only faintly, so the curve is steep.
-    emissive = at_midBlock.w / 15.0;
+    // Iris for 26.1.2 hands geometry outside the chunk meshes an integer at_midBlock with w = -1: NaN here.
+    vec4 midBlock = at_midBlock;
+    emissive = midBlock.w >= 0.0 && midBlock.w <= 15.0 ? midBlock.w / 15.0 : 0.0;
     emissive *= emissive;
     if (id == ID_PLANT || id == ID_PLANT_LOWER || id == ID_PLANT_UPPER || id == ID_EMISSIVE_PLANT || id == ID_LILY) {
         material = MAT_PLANT;
@@ -52,7 +54,7 @@ void main() {
 
     vec3 worldPos = playerPos + cameraPosition;
     // 0 at the bottom of the block, 1 at its top (at_midBlock points from the vertex to the block centre, in 1/64).
-    float height = saturate(0.5 - at_midBlock.y / 64.0);
+    float height = abs(midBlock.y) <= 128.0 ? saturate(0.5 - midBlock.y / 64.0) : 0.5;
     float exposed = smoothstep(0.2, 0.7, lightmap.y)
         * (1.0 - smoothstep(ANIMATION_DISTANCE * 0.75, ANIMATION_DISTANCE, length(playerPos)));
     if (exposed > 0.0) {
