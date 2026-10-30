@@ -56,9 +56,10 @@ float blockLightFlicker(vec3 worldPos) {
 }
 
 // Torches and lamps light the blocks next to them about as brightly as vanilla does (2.2 here, with the dark-adapted
-// exposure in caves, made every torch a floodlight).
+// exposure in caves, made every torch a floodlight). A cube fell off too fast: in a cave a torch lit only the blocks
+// right around it, a bright dot in the dark; with 2.4 its light reaches across a room like vanilla's.
 float blockLightCurve(float level) {
-    return level * level * level * 0.8 + level * 0.04;
+    return pow(level, 2.4) * 0.8 + level * 0.04;
 }
 
 float fresnelSchlick(float cosTheta, float f0) {

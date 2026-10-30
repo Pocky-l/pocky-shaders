@@ -11,7 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sky in their own colour; polished stone, quartz, concrete, glazed terracotta and gems catch the sun and reflect the
   world around them; dirt, sand, gravel, snow and wool stay fully matte. New options: Texture Relief (with depth) and
   Glossy Reflections.
+- Volumetric light: in hazy air the sun shines through leaves, gaps in the clouds and fog in visible beams; under
+  water columns of light come down from the waves. Option Volumetric Light (with strength), off on Low.
+- Foggy mornings: on some days (more often after a rain) a thick, low fog lies over the land from the small hours and
+  burns off by mid-morning, with sunbeams through the trees.
+- Under water: moving caustics on the bottom and the walls around you, the view sways gently with the water (option
+  Underwater Sway), the water is a deep blue that is brighter towards the surface and darker the deeper you dive.
+- Cave air: the far parts of a cave sink into a deep, cool dark while the air around torches, lanterns and lava glows
+  (option Cave Fog, with density).
 ### Changed
+- Torches, lanterns and other lights reach further, like vanilla's: in a cave a torch lit only the blocks right around
+  it.
 - Blocks keep their form at noon: the sunlit sides of a block are clearly darker than its top again, like in vanilla
   (they were almost as bright, which made blocks look flat and plastic). Shade stays as soft as before.
 - Nights are darker and calmer: a deep blue night sky instead of a light grey one, dim moonlit clouds, and torches

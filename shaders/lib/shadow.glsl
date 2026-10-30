@@ -40,6 +40,17 @@ vec3 shadowTint(vec2 coord, float solid, float total) {
 #endif
 }
 
+// Whether the sun reaches a point in the air or water (opaque casters only, one hardware-filtered lookup, no normal
+// offset): for the light scattered along view rays. 1 outside the shadow map.
+float opaqueShadowAt(vec3 playerPos) {
+    vec3 clip = projectAndDivide(shadowProjection, (shadowModelView * vec4(playerPos, 1.0)).xyz);
+    vec3 coord = distortShadowClip(clip) * 0.5 + 0.5;
+    if (any(greaterThan(abs(coord.xy - 0.5), vec2(0.5)))) {
+        return 1.0;
+    }
+    return texture(shadowtex1, vec3(coord.xy, coord.z - 0.0001));
+}
+
 // Sun/moon visibility (rgb: tinted by stained glass and water above). playerPos is relative to the camera.
 // pixelLock: playerPos is the centre of a texture texel (pixel shadows on terrain, see texelCentre in gbuffers_lit).
 vec3 shadowVisibility(vec3 playerPos, vec3 worldNormal, float noise, bool foliage, bool pixelLock) {

@@ -64,6 +64,14 @@ const float shadowIntervalSize = 16.0;
 #define CLOUD_SIZE 1.6 // [1.0 1.3 1.6 2.0 2.5 3.0]
 #define CLOUD_HEIGHT 1.5 // [1.0 1.25 1.5 2.0 2.5]
 #define LIGHT_SHAFTS
+// Sunbeams through leaves, clouds and fog in hazy air, and columns of light under water (uses the shadow map).
+#define VOLUMETRIC_LIGHT
+#define VOLUMETRIC_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0 3.0]
+// Dark, deep air in caves that the light of torches and lava glows in.
+#define CAVE_FOG
+#define CAVE_FOG_DENSITY 1.0 // [0.0 0.5 0.75 1.0 1.5 2.0]
+// Under water the view sways gently with the waves.
+#define UNDERWATER_WOBBLE
 #define LIGHT_SHAFT_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
 #define FOG_DENSITY 1.0 // [0.0 0.25 0.5 0.75 1.0 1.5 2.0]
 #define VALLEY_MIST
@@ -115,6 +123,12 @@ const float shadowIntervalSize = 16.0;
 #endif
 #ifdef LIGHT_SHAFTS
 #endif
+#ifdef VOLUMETRIC_LIGHT
+#endif
+#ifdef CAVE_FOG
+#endif
+#ifdef UNDERWATER_WOBBLE
+#endif
 #ifdef VALLEY_MIST
 #endif
 #ifdef BLOOM
@@ -135,6 +149,7 @@ const float shadowIntervalSize = 16.0;
 const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 30.0 40.0]
 
 #if QUALITY == 0
+    #define VOLUMETRIC_STEPS 8
     #define SHADOW_SAMPLES 4
     #define SSAO_SAMPLES 4
     #define SSR_STEPS 0
@@ -145,6 +160,7 @@ const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 3
     #define SS_SHADOW_GROWTH 1.73
     #define MIST_STEPS 5
 #elif QUALITY == 1
+    #define VOLUMETRIC_STEPS 12
     #define SHADOW_SAMPLES 8
     #define SSAO_SAMPLES 6
     #define SSR_STEPS 16
@@ -155,6 +171,7 @@ const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 3
     #define SS_SHADOW_GROWTH 1.43
     #define MIST_STEPS 6
 #elif QUALITY == 2
+    #define VOLUMETRIC_STEPS 16
     #define SHADOW_SAMPLES 12
     #define SSAO_SAMPLES 8
     #define SSR_STEPS 24
@@ -165,6 +182,7 @@ const float sunPathRotation = -20.0; // [-40.0 -30.0 -20.0 -10.0 0.0 10.0 20.0 3
     #define SS_SHADOW_GROWTH 1.25
     #define MIST_STEPS 8
 #else
+    #define VOLUMETRIC_STEPS 20
     #define SHADOW_SAMPLES 16
     #define SSAO_SAMPLES 12
     #define SSR_STEPS 32

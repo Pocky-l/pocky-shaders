@@ -120,3 +120,11 @@ option.SHADOW_LIGHT=Яркость теней
 option.SHADOW_LIGHT.comment=Сколько солнечного света доходит в тень. 0 = реалистичная тёмная тень.
 option.LIGHT_RESPONSE=Ванильный свет
 option.LIGHT_RESPONSE.comment=Насколько яркий солнечный свет держится ванильных цветов мира. 0 = физический свет (полдень гораздо ярче).
+option.VOLUMETRIC_LIGHT=Объёмный свет
+option.VOLUMETRIC_LIGHT.comment=Солнечные лучи сквозь листву, облака и туман в дымке и столбы света под водой.
+option.VOLUMETRIC_STRENGTH=Сила объёмного света
+option.CAVE_FOG=Пещерный туман
+option.CAVE_FOG.comment=Дальние части пещер уходят в глубокую темноту, воздух у факелов и лавы светится.
+option.CAVE_FOG_DENSITY=Плотность пещерного тумана
+option.UNDERWATER_WOBBLE=Покачивание под водой
+option.UNDERWATER_WOBBLE.comment=Под водой изображение мягко покачивается вместе с водой.

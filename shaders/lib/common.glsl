@@ -162,6 +162,41 @@ float dawnHaze() {
     return smoothstep(-750.0, -300.0, ticks) * (1.0 - smoothstep(250.0, 750.0, ticks)) * (1.0 - rainStrength);
 }
 
+// Foggy mornings: on some days (about one in four, every other day after a rain) a thick, low fog lies over the land
+// from the small hours and burns off by mid-morning. 0..1.
+float foggyMorning() {
+    // The night before belongs to the morning it leads to.
+    float day = float(worldDay) + (worldTime >= 18000 ? 1.0 : 0.0);
+    float chance = 0.25 + 0.25 * saturate(wetness * 2.0);
+    float foggy = step(hash12(vec2(day, 4.17)), chance);
+    // Ticks from 6:00 (sunrise), from -6000 (0:00) to 18000.
+    float ticks = mod(float(worldTime) + 6000.0, 24000.0) - 6000.0;
+    float time = smoothstep(-4500.0, -2000.0, ticks) * (1.0 - smoothstep(1500.0, 3800.0, ticks));
+    return foggy * time * (1.0 - rainStrength);
+}
+
+// The morning fog lies low: thick on the ground and in the valleys, thin a dozen blocks up, gone over the hills.
+const float MORNING_FOG_DENSITY = 0.03;
+const float MORNING_FOG_FALLOFF = 0.085;
+
+// Optical depth of the morning fog along a ray from the camera to playerPos (exact integral of its height profile).
+float morningFogDepth(vec3 playerPos) {
+    float fog = foggyMorning();
+    if (fog <= 0.0) {
+        return 0.0;
+    }
+    float dy = playerPos.y * MORNING_FOG_FALLOFF;
+    float height = exp(-max(cameraPosition.y - 63.0, -8.0) * MORNING_FOG_FALLOFF)
+            * (abs(dy) > 1e-3 ? (1.0 - exp(-dy)) / dy : 1.0);
+    return length(playerPos) * fog * MORNING_FOG_DENSITY * clamp(height, 0.0, 2.2) * FOG_DENSITY;
+}
+
+// How many blocks of water lie above the eye while under water, from the sky light that reaches it (water dims the
+// sky light by one level per block).
+float eyeWaterDepth() {
+    return (1.0 - float(eyeBrightnessSmooth.y) / 240.0) * 15.0;
+}
+
 // How hard it snows (0 in rain).
 float snowfall() { return rainStrength * snowWeather; }
 float luminance(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }

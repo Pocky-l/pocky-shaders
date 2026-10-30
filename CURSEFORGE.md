@@ -14,11 +14,13 @@
 - ☁️ **Vanilla-shaped clouds with volume** - the game's own cloud pattern as lit 3D cubes that cast shadows; size and
   height adjustable.
 - 🌊 **Living water** - refraction, reflections of the world and sky, sun glitter, caustics, shore foam, foaming
-  waterfalls, lamp light glowing in the water, a darker sea far from the shore.
+  waterfalls, lamp light glowing in the water, a darker sea far from the shore; under water, columns of sunlight and
+  caustics dancing over the bottom.
 - 🌾 **Waving grass and leaves** with light shining through them - also the leaves, flowers, saplings and crops of
   other mods, which join through the game's block tags.
 - ⛈️ **Weather you can feel** - a grey overcast in rain, dark thunderstorms with lightning lighting the clouds, wet
-  ground with puddle patches, rainbows after rain, mist in valleys and swamps.
+  ground with puddle patches, rainbows after rain, mist in valleys and swamps, foggy mornings with sunbeams through
+  the trees.
 - 🧱 **Real materials** - every block takes the light by the relief of its own texture; metals shine and mirror the
   sky in their own colour, polished stone and glazed blocks reflect the world, dirt and sand stay matte.
 - 🔥 **Warm block light** - flickering torches, glowing lava that looks hot, caves that follow the game's Brightness

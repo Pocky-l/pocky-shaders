@@ -177,6 +177,9 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     float dy = playerPos.y * falloff;
     float heightTerm = exp(-max(y0, -40.0) * falloff) * (abs(dy) > 1e-3 ? (1.0 - exp(-dy)) / dy : 1.0);
     float amount = 1.0 - exp(-fogOpticalDepth(dist, rainSheets(dir, dist)) * clamp(heightTerm, 0.02, 4.0));
+    // A foggy morning: thick, low fog over the land (its sunlit glow and the sunbeams in it come from the volumetric
+    // light, see volumetrics.fsh).
+    amount = 1.0 - (1.0 - amount) * exp(-morningFogDepth(playerPos) * smoothstep(0.05, 0.6, eyeSky));
 
     // Ground mist (see groundMist) and a thin veil of air lying on the land and water, both gone in rain (rain fog
     // takes over: the layers would only stack into milk).
@@ -260,6 +263,20 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
         color = mix(color, dawnCol, dawnAmount * (1.0 - saturate(amount)));
     }
     color = mix(color, fogCol, saturate(amount));
+#ifdef CAVE_FOG
+    // Cave air: away from the sky the far parts of a cave sink into a deep, cool dark, and the air around the player
+    // glows with the light of the torches, lanterns and lava nearby (the block light at the eye).
+    float cave = 1.0 - smoothstep(0.02, 0.35, eyeSky);
+    if (cave > 0.0) {
+        float eyeBlock = float(eyeBrightnessSmooth.x) / 240.0;
+        vec3 glow = blockLightColor() * blockLightCurve(eyeBlock) * 0.09 * BLOCK_LIGHT_EXPOSURE / sceneExposure();
+        // A cool blue-grey that reads as air in the dark, not as plain black.
+        vec3 air = vec3(0.006, 0.0075, 0.011) * brightnessLift() + glow;
+        // Dense enough to be felt within a room: a third of the way at a dozen blocks.
+        float caveAmount = (1.0 - exp(-dist * 0.032 * CAVE_FOG_DENSITY)) * cave;
+        color = mix(color, air, caveAmount);
+    }
+#endif
 #else
     float amount = smoothstep(renderDistance * 0.2, renderDistance, dist);
 #ifdef DIM_NETHER

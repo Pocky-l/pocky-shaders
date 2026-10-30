@@ -8,6 +8,8 @@ uniform sampler2D colortex7;
 #include "/lib/sky.glsl"
 #define CLOUD_LOOKUP
 #include "/lib/clouds.glsl"
+#define SHADOW_LOOKUP
+#include "/lib/shadow.glsl"
 #endif
 #include "/lib/lighting.glsl"
 #include "/lib/fog.glsl"
@@ -20,6 +22,8 @@ uniform sampler2D colortex3;
 uniform sampler2D colortex4;
 // Particles, rain and snow (premultiplied by their blending), laid over everything else.
 uniform sampler2D colortex8;
+// Volumetric light from the previous pass (volumetrics.fsh), marched with a 4x4 pattern of offsets.
+uniform sampler2D colortex9;
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
 #ifdef DISTANT_HORIZONS
@@ -189,6 +193,27 @@ vec3 glossyReflection(vec3 color, vec2 uv) {
     }
     float fresnel = fresnelSchlick(nv, gloss.x) * (0.25 + 0.75 * smoothness);
     return mix(color, env, fresnel);
+}
+#endif
+
+#ifdef DIM_OVERWORLD
+// The volumetric light averaged over the 4x4 block of pixels its offsets repeat in, skipping pixels at a very different
+// depth (the edge of a tree against the sky keeps its outline).
+vec3 volumetricLight(vec2 uv) {
+    vec2 px = 1.0 / vec2(viewWidth, viewHeight);
+    float centre = linearizeDepth(texture(depthtex0, uv).r);
+    vec3 sum = vec3(0.0);
+    float weight = 0.0;
+    for (int y = -2; y <= 1; y++) {
+        for (int x = -2; x <= 1; x++) {
+            vec2 p = uv + (vec2(x, y) + 0.5) * px;
+            float d = linearizeDepth(texture(depthtex0, p).r);
+            float w = 1.0 / (1.0 + abs(d - centre) / max(centre * 0.1, 0.5));
+            sum += texture(colortex9, p).rgb * w;
+            weight += w;
+        }
+    }
+    return sum / weight;
 }
 #endif
 
@@ -543,7 +568,16 @@ vec3 lightShafts(vec2 uv, float noise) {
 }
 
 void main() {
-    vec3 color = texture(colortex0, texcoord).rgb;
+    vec2 sceneUv = texcoord;
+#ifdef UNDERWATER_WOBBLE
+    if (isEyeInWater == 1) {
+        // Under water the world sways slowly, as if seen through the moving water.
+        float t = frameTimeCounter;
+        sceneUv += vec2(sin(texcoord.y * 23.0 + t * 1.7), cos(texcoord.x * 19.0 + t * 1.3)) * 0.0016;
+        sceneUv = clamp(sceneUv, vec2(0.001), vec2(0.999));
+    }
+#endif
+    vec3 color = texture(colortex0, sceneUv).rgb;
     float noise = dither(gl_FragCoord.xy);
 
     vec3 surfaceView = viewPosition(texcoord, false);
@@ -575,12 +609,30 @@ void main() {
     if (isEyeInWater == 1) {
         // Underwater: light fades with distance, blue-green.
         float d = sky ? 48.0 : min(dist, 48.0);
+        vec3 viewDir = playerPos / max(dist, 1e-4);
 #ifdef DIM_OVERWORLD
         vec3 light = (ambientLightColor() * 0.6 + directLightColor() * 0.15) / PI * (float(eyeBrightnessSmooth.y) / 240.0);
+#if defined WATER_CAUSTICS
+        // Sunlight focused by the waves plays over the bottom and the walls around the swimmer.
+        vec3 l = lightDirection();
+        if (!sky && waterData.w < 0.5 && l.y > 0.05) {
+            float skyHere = mod(floor(texture(colortex1, texcoord).z * 65535.0 + 0.5), 256.0) / 255.0;
+            float depthHere = max(eyeWaterDepth() - playerPos.y, 0.0);
+            vec2 entry = cameraPosition.xz + playerPos.xz + l.xz / l.y * depthHere;
+            float caustics = waterCaustics(entry) * opaqueShadowAt(playerPos + l * 0.3) * exp(-0.1 * depthHere)
+                    * smoothstep(0.3, 0.8, skyHere) * smoothstep(0.0, 0.1, sunDirection().y) * (1.0 - rainStrength)
+                    * (1.0 - smoothstep(16.0, 40.0, dist));
+            color *= 1.0 + caustics * 1.4;
+        }
+#endif
 #else
         vec3 light = vec3(0.04);
 #endif
-        vec3 fogCol = light * vec3(0.05, 0.22, 0.26) + vec3(0.002, 0.006, 0.008);
+        // Light comes from above: the water glows brighter looking up towards the surface and fades to a deep blue
+        // looking down, and the deeper the swimmer, the darker it all gets.
+        // A deep blue rather than a milky turquoise: the light shafts must stand out against it.
+        light *= mix(0.35, 1.2, smoothstep(-0.6, 0.8, viewDir.y)) * exp(-0.06 * eyeWaterDepth());
+        vec3 fogCol = light * vec3(0.018, 0.11, 0.2) + vec3(0.001, 0.004, 0.008);
         color = color * exp(-vec3(0.38, 0.09, 0.07) / WATER_CLARITY * d) + fogCol * (1.0 - exp(-d * 0.12 / WATER_CLARITY));
     } else if (isEyeInWater == 2) {
         color = mix(color, vec3(1.0, 0.3, 0.05) * 2.0, 1.0 - exp(-dist * 0.9));
@@ -601,6 +653,9 @@ void main() {
     }
 #endif
     color = applyBlindnessFog(color, sky ? 1000.0 : dist);
+#if defined DIM_OVERWORLD && defined VOLUMETRIC_LIGHT
+    color += volumetricLight(texcoord);
+#endif
     vec4 particles = texture(colortex8, texcoord);
     color = color * (1.0 - particles.a) + particles.rgb;
     color += lightShafts(texcoord, noise);

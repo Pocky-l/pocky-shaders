@@ -36,8 +36,10 @@ PROGRAMS = {
     'gbuffers_water': ('gbuffers_water.vsh', 'gbuffers_water.fsh', [], False),
     'deferred': (FULLSCREEN, 'deferred.fsh', [], False),
     'deferred1': (FULLSCREEN, 'deferred1.fsh', [], False),
-    'composite': (FULLSCREEN, 'composite.fsh', [], False),
-    'composite1': (FULLSCREEN, 'composite1.fsh', [], False),
+    # Volumetric light (sunbeams in the air, light columns under water), then water/fog, then bloom + tonemap.
+    'composite': (FULLSCREEN, 'volumetrics.fsh', [], True),
+    'composite1': (FULLSCREEN, 'composite.fsh', [], False),
+    'composite2': (FULLSCREEN, 'composite1.fsh', [], False),
     'final': (FULLSCREEN, 'final.fsh', [], False),
     'dh_terrain': ('dh_terrain.vsh', 'dh_terrain.fsh', [], False),
     'dh_water': ('dh_terrain.vsh', 'dh_terrain.fsh', ['PROG_DH_WATER'], False),
