@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sky in their own colour; polished stone, quartz, concrete, glazed terracotta and gems catch the sun and reflect the
   world around them; dirt, sand, gravel, snow and wool stay fully matte. New options: Texture Relief (with depth) and
   Glossy Reflections.
-- Under water, columns of sunlight come down from the waves (option Volumetric Light, with strength; off on Low).
-- Under water: moving caustics on the bottom and the walls around you, the view sways gently with the water (option
-  Underwater Sway), the water is a deep blue that is brighter towards the surface and darker the deeper you dive.
+- Under water: columns of sunlight come down from the waves (option Volumetric Light, with strength; off on Low),
+  caustics move over the bottom and the walls around you, the view sways gently with the water (option Underwater
+  Sway), and the water is a deep blue, brighter towards the surface and darker the deeper you dive.
 ### Changed
 - Torches, lanterns and other lights reach further, like vanilla's: in a cave a torch lit only the blocks right around
   it.
@@ -29,8 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   veil are off (options Morning Mist, Ground Mist and Distant Haze bring them back). Rain, snow, the Nether and the
   edge of the world keep their fog. The daytime sky is a little bluer.
 ### Fixed
-- Blizzards, snowy-biome weather and swamp mist never switched on: the two weather values the pack reads from the
-  game were written in a form Iris ignored.
+- Blizzards and snowy-biome weather never switched on: the weather values the pack reads from the game were written
+  in a form Iris ignored.
 
 ## [2.0.3] - 2026-10-30
 ### Fixed
