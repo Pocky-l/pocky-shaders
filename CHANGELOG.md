@@ -11,14 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sky in their own colour; polished stone, quartz, concrete, glazed terracotta and gems catch the sun and reflect the
   world around them; dirt, sand, gravel, snow and wool stay fully matte. New options: Texture Relief (with depth) and
   Glossy Reflections.
-- Volumetric light: in hazy air the sun shines through leaves, gaps in the clouds and fog in visible beams; under
-  water columns of light come down from the waves. Option Volumetric Light (with strength), off on Low.
-- Foggy mornings: on some days (more often after a rain) a thick, low fog lies over the land from the small hours and
-  burns off by mid-morning, with sunbeams through the trees.
+- Under water, columns of sunlight come down from the waves (option Volumetric Light, with strength; off on Low).
 - Under water: moving caustics on the bottom and the walls around you, the view sways gently with the water (option
   Underwater Sway), the water is a deep blue that is brighter towards the surface and darker the deeper you dive.
-- Cave air: the far parts of a cave sink into a deep, cool dark while the air around torches, lanterns and lava glows
-  (option Cave Fog, with density).
 ### Changed
 - Torches, lanterns and other lights reach further, like vanilla's: in a cave a torch lit only the blocks right around
   it.
@@ -30,8 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the End is lit about as brightly as in vanilla.
 - Shallow water keeps vanilla's blue instead of turning into a milky white pane over sand; caustics are softer and
   only under the sun.
-- No smoky mist banks over distant forests at noon (the mist stays in the morning and evening); the daytime sky is a
-  little bluer.
+- No haze by default: the mist banks over low land, the morning mist in the valleys, the dawn haze and the distant
+  veil are off (options Morning Mist, Ground Mist and Distant Haze bring them back). Rain, snow, the Nether and the
+  edge of the world keep their fog. The daytime sky is a little bluer.
 ### Fixed
 - Blizzards, snowy-biome weather and swamp mist never switched on: the two weather values the pack reads from the
   game were written in a form Iris ignored.

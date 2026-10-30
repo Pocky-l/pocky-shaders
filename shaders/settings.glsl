@@ -64,19 +64,18 @@ const float shadowIntervalSize = 16.0;
 #define CLOUD_SIZE 1.6 // [1.0 1.3 1.6 2.0 2.5 3.0]
 #define CLOUD_HEIGHT 1.5 // [1.0 1.25 1.5 2.0 2.5]
 #define LIGHT_SHAFTS
-// Sunbeams through leaves, clouds and fog in hazy air, and columns of light under water (uses the shadow map).
+// Columns of sunlight under water (uses the shadow map).
 #define VOLUMETRIC_LIGHT
 #define VOLUMETRIC_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0 3.0]
-// Dark, deep air in caves that the light of torches and lava glows in.
-#define CAVE_FOG
-#define CAVE_FOG_DENSITY 1.0 // [0.0 0.5 0.75 1.0 1.5 2.0]
 // Under water the view sways gently with the waves.
 #define UNDERWATER_WOBBLE
 #define LIGHT_SHAFT_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.5 2.0]
 #define FOG_DENSITY 1.0 // [0.0 0.25 0.5 0.75 1.0 1.5 2.0]
-#define VALLEY_MIST
-#define FAR_HAZE 1.0 // [0.0 0.5 1.0 1.5 2.0]
-#define LOW_HAZE 1.0 // [0.0 0.5 0.75 1.0 1.5 2.0]
+// Haze is off by default (the owner's choice); these bring back the morning mist and dawn haze, the distant veil and
+// the banks of mist over low land.
+//#define VALLEY_MIST
+#define FAR_HAZE 0.0 // [0.0 0.5 1.0 1.5 2.0]
+#define LOW_HAZE 0.0 // [0.0 0.5 0.75 1.0 1.5 2.0]
 
 // Post processing
 #define BLOOM
@@ -124,8 +123,6 @@ const float shadowIntervalSize = 16.0;
 #ifdef LIGHT_SHAFTS
 #endif
 #ifdef VOLUMETRIC_LIGHT
-#endif
-#ifdef CAVE_FOG
 #endif
 #ifdef UNDERWATER_WOBBLE
 #endif

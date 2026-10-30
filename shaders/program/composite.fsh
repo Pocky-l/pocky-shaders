@@ -654,7 +654,9 @@ void main() {
 #endif
     color = applyBlindnessFog(color, sky ? 1000.0 : dist);
 #if defined DIM_OVERWORLD && defined VOLUMETRIC_LIGHT
-    color += volumetricLight(texcoord);
+    if (isEyeInWater == 1) {
+        color += volumetricLight(texcoord);
+    }
 #endif
     vec4 particles = texture(colortex8, texcoord);
     color = color * (1.0 - particles.a) + particles.rgb;

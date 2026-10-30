@@ -75,6 +75,8 @@ VARIANTS = [
     {'CLOUDS': '1', 'WATER_REFLECTIONS': '1', 'DISTANT_HORIZONS': True},
     {'DEBUG_VIEW': '1', 'DISTANT_HORIZONS': True},
     {'DEBUG_VIEW': '1'},
+    # The haze options are off by default.
+    {'VALLEY_MIST': True, 'LOW_HAZE': '1.0', 'FAR_HAZE': '1.0'},
 ]
 
 
@@ -84,7 +86,9 @@ def settings_with(options):
         if name == 'DISTANT_HORIZONS':
             continue
         if value is False:
-            text, n = re.subn(rf'^#define {name}\b', f'//#define {name}', text, flags=re.M)
+            text, n = re.subn(rf'^(//)?#define {name}\b', f'//#define {name}', text, flags=re.M)
+        elif value is True:
+            text, n = re.subn(rf'^(//)?#define {name}\b', f'#define {name}', text, flags=re.M)
         else:
             text, n = re.subn(rf'^#define {name} \S+', f'#define {name} {value}', text, flags=re.M)
         if n == 0:

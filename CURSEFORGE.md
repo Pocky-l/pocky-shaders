@@ -2,7 +2,7 @@
 
 **A cosy, natural shader pack for Iris** - soft shadows, living water and foliage, juicy sunrises and weather you can feel, while the game still looks like Minecraft. Shows the weather of my rain, snow and leaves mods.
 
-![A lake village at noon: clear water, reflections and soft haze](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/screenshots/lake.jpg)
+![A lake village at noon: clear water and reflections](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/screenshots/lake.jpg)
 
 📦 **Requires** [Iris](https://www.curseforge.com/minecraft/mc-mods/irisshaders) (with [Sodium](https://www.curseforge.com/minecraft/mc-mods/sodium)) or [Oculus](https://www.curseforge.com/minecraft/mc-mods/oculus) · Minecraft 1.20.1 - 26.3 · put the zip into `shaderpacks`
 
@@ -10,7 +10,7 @@
 
 - ☀️ **Natural light** - a physically based sky, a warm low sun, soft coloured shadows with crisp pixel edges, and
   colours close to vanilla at noon instead of a repainted world.
-- 🌅 **Juicy sunrises and sunsets** on both sides of the sky, a pink dawn with a morning haze, a soft moonlit night.
+- 🌅 **Juicy sunrises and sunsets** on both sides of the sky, a pink dawn, a dark moonlit night.
 - ☁️ **Vanilla-shaped clouds with volume** - the game's own cloud pattern as lit 3D cubes that cast shadows; size and
   height adjustable.
 - 🌊 **Living water** - refraction, reflections of the world and sky, sun glitter, caustics, shore foam, foaming
@@ -19,13 +19,12 @@
 - 🌾 **Waving grass and leaves** with light shining through them - also the leaves, flowers, saplings and crops of
   other mods, which join through the game's block tags.
 - ⛈️ **Weather you can feel** - a grey overcast in rain, dark thunderstorms with lightning lighting the clouds, wet
-  ground with puddle patches, rainbows after rain, mist in valleys and swamps, foggy mornings with sunbeams through
-  the trees.
+  ground with puddle patches, rainbows after rain.
 - 🧱 **Real materials** - every block takes the light by the relief of its own texture; metals shine and mirror the
   sky in their own colour, polished stone and glazed blocks reflect the world, dirt and sand stay matte.
 - 🔥 **Warm block light** - flickering torches, glowing lava that looks hot, caves that follow the game's Brightness
   setting; a hazy Nether and a lit End close to vanilla's.
-- 🔭 **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) support** - distant land and water shaded like the near world, with shadows and haze.
+- 🔭 **[Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) support** - distant land and water shaded like the near world, with shadows.
 - 🎚️ **Four quality presets** - Low, Medium, High, Ultra on the Profile button, and every effect on its own switch in
   the shader pack settings.
 
@@ -39,7 +38,7 @@ The mods hand their weather to the pack themselves while it is on - no extra mod
 
 [![Rustling Leaves](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/rustling_leaves.png)](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves) ✅ **[Rustling Leaves](https://www.curseforge.com/minecraft/mc-mods/rustling-leaves)** (2.6.0 or newer) - grass and crowns sway with the same gust waves that blow the leaves; leaves and litter are shaded like the blocks around them.
 
-[![Turbo for Distant Horizons](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/dhturbo.png)](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons) ✅ **[Turbo for Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons)** - the distant land fills in fast, and the pack gives it shadows, water and haze.
+[![Turbo for Distant Horizons](https://raw.githubusercontent.com/Pocky-l/pocky-shaders/main/docs/more-mods/dhturbo.png)](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons) ✅ **[Turbo for Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/turbo-for-distant-horizons)** - the distant land fills in fast, and the pack gives it shadows and water.
 
 ## 🎮 Controls
 

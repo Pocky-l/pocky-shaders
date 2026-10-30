@@ -162,49 +162,6 @@ float dawnHaze() {
     return smoothstep(-750.0, -300.0, ticks) * (1.0 - smoothstep(250.0, 750.0, ticks)) * (1.0 - rainStrength);
 }
 
-// Foggy mornings: on some days (about one in four, every other day after a rain) a thick, low fog lies over the land
-// from the small hours and burns off by mid-morning. 0..1.
-float foggyMorning() {
-    // The night before belongs to the morning it leads to.
-    float day = float(worldDay) + (worldTime >= 18000 ? 1.0 : 0.0);
-    float chance = 0.25 + 0.25 * saturate(wetness * 2.0);
-    float foggy = step(hash12(vec2(day, 4.17)), chance);
-    // Ticks from 6:00 (sunrise), from -6000 (0:00) to 18000.
-    float ticks = mod(float(worldTime) + 6000.0, 24000.0) - 6000.0;
-    float time = smoothstep(-4500.0, -2000.0, ticks) * (1.0 - smoothstep(1500.0, 3800.0, ticks));
-    return foggy * time * (1.0 - rainStrength);
-}
-
-// Ground haze and fog lie low, as a thin layer on the ground: they fill hollows and valleys and soften the ground
-// in the distance, while hills, tree crowns and everything a few blocks up stay clear - a fog over the whole view
-// only spoiled it. The layer follows the land: its base under a view ray is the lower of the surface the ray hits
-// and the player's own ground level (so a far hilltop rises out of the valley fog, a valley below fills with it).
-float hazeBase(vec3 playerPos) {
-    return min(cameraPosition.y + playerPos.y, cameraPosition.y - 1.62);
-}
-
-// Optical depth along the ray to playerPos through a layer of density 1 at its base that thins by exp(-falloff x
-// height) above it (exact integral; at most `below` blocks of it count under the base).
-float groundLayerDepth(vec3 playerPos, float base, float falloff, float below) {
-    float dy = playerPos.y * falloff;
-    float height = exp(-max(cameraPosition.y - base, -below) * falloff) * (abs(dy) > 1e-3 ? (1.0 - exp(-dy)) / dy : 1.0);
-    return length(playerPos) * clamp(height, 0.0, exp(below * falloff));
-}
-
-// The morning fog: a layer a few blocks deep.
-const float MORNING_FOG_DENSITY = 0.018;
-const float MORNING_FOG_FALLOFF = 0.2;
-
-// Optical depth of the morning fog along a ray from the camera to playerPos.
-float morningFogDepth(vec3 playerPos) {
-    float fog = foggyMorning();
-    if (fog <= 0.0) {
-        return 0.0;
-    }
-    return groundLayerDepth(playerPos, hazeBase(playerPos), MORNING_FOG_FALLOFF, 6.0) * fog * MORNING_FOG_DENSITY
-            * FOG_DENSITY;
-}
-
 // How many blocks of water lie above the eye while under water, from the sky light that reaches it (water dims the
 // sky light by one level per block).
 float eyeWaterDepth() {

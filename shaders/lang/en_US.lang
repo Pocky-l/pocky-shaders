@@ -62,7 +62,7 @@ option.LIGHT_SHAFT_STRENGTH=Light Shaft Strength
 option.FOG_DENSITY=Fog Density
 option.FOG_DENSITY.comment=Distance haze, rain fog and morning mist.
 option.VALLEY_MIST=Morning Mist
-option.VALLEY_MIST.comment=Low mist in valleys at sunrise and in rain.
+option.VALLEY_MIST.comment=Low mist in valleys and a haze over the land at sunrise.
 option.LOW_HAZE=Ground Mist
 option.LOW_HAZE.comment=Banks of low cloud lying on water, swamps and low land in the distance, thickest in the morning and evening.
 option.FAR_HAZE=Distant Haze
@@ -121,10 +121,7 @@ option.SHADOW_LIGHT.comment=How much sunlight still reaches shaded places. 0 = r
 option.LIGHT_RESPONSE=Vanilla Light
 option.LIGHT_RESPONSE.comment=How close bright sunlight stays to the game's own colours. 0 = physical light (much brighter noon).
 option.VOLUMETRIC_LIGHT=Volumetric Light
-option.VOLUMETRIC_LIGHT.comment=Sunbeams through leaves, clouds and fog in hazy air, and columns of light under water.
+option.VOLUMETRIC_LIGHT.comment=Columns of sunlight coming down through the water.
 option.VOLUMETRIC_STRENGTH=Volumetric Light Strength
-option.CAVE_FOG=Cave Fog
-option.CAVE_FOG.comment=The far parts of caves sink into a deep dark; the air around torches and lava glows.
-option.CAVE_FOG_DENSITY=Cave Fog Density
 option.UNDERWATER_WOBBLE=Underwater Sway
 option.UNDERWATER_WOBBLE.comment=Under water the view sways gently with the water.

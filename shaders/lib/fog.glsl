@@ -177,11 +177,6 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
     float dy = playerPos.y * falloff;
     float heightTerm = exp(-max(y0, -40.0) * falloff) * (abs(dy) > 1e-3 ? (1.0 - exp(-dy)) / dy : 1.0);
     float amount = 1.0 - exp(-fogOpticalDepth(dist, rainSheets(dir, dist)) * clamp(heightTerm, 0.02, 4.0));
-    // A foggy morning: thick, low fog over the land (its sunlit glow and the sunbeams in it come from the volumetric
-    // light, see volumetrics.fsh).
-    // Never a wall: the nearest blocks stay clear, and even far away at most 55% of the land is hidden.
-    float morningFog = (1.0 - exp(-morningFogDepth(playerPos) * smoothstep(3.0, 14.0, dist))) * 0.55;
-    amount = 1.0 - (1.0 - amount) * (1.0 - morningFog * smoothstep(0.05, 0.6, eyeSky));
 
     // Ground mist (see groundMist) and a thin veil of air lying on the land and water, both gone in rain (rain fog
     // takes over: the layers would only stack into milk).
@@ -230,14 +225,18 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
 
     // Dawn haze: for about an hour around sunrise a soft haze lies over the whole world - thicker in the low land, but
     // reaching up over the hills too - and glows gold towards the rising sun (see the colour below).
-    float dawn = dawnHaze() * smoothstep(0.05, 0.6, eyeSky);
     float dawnAmount = 0.0;
+#ifdef VALLEY_MIST
+    float dawn = dawnHaze() * smoothstep(0.05, 0.6, eyeSky);
     if (dawn > 0.0) {
-        // Low on the land like the other ground haze (a layer of ten blocks or so), with a faint veil over the distance;
-        // spread through all the air it washed the whole sunrise over in yellow.
-        float layer = groundLayerDepth(playerPos, hazeBase(playerPos), 0.1, 6.0);
-        dawnAmount = min(1.0 - exp(-dawn * FOG_DENSITY * (0.00006 * dist + 0.0025 * layer)), 0.45);
+        const float DAWN_FALLOFF = 0.02;
+        float ddy = playerPos.y * DAWN_FALLOFF;
+        float dawnHeight = exp(-max(cameraPosition.y - 62.0, -20.0) * DAWN_FALLOFF)
+                * (abs(ddy) > 1e-3 ? (1.0 - exp(-ddy)) / ddy : 1.0);
+        // A veil, not a wall: about a quarter of the way at 300 blocks over low land.
+        dawnAmount = 1.0 - exp(-dist * dawn * FOG_DENSITY * (0.00015 + 0.0006 * clamp(dawnHeight, 0.0, 3.0)));
     }
+#endif
 
     // Hide the edge of the loaded world.
     float border = smoothstep(renderDistance * 0.72, renderDistance, dist);
@@ -263,23 +262,6 @@ vec3 applyFog(vec3 color, vec3 playerPos, float renderDistance) {
         color = mix(color, dawnCol, dawnAmount * (1.0 - saturate(amount)));
     }
     color = mix(color, fogCol, saturate(amount));
-#ifdef CAVE_FOG
-    // Cave air: a cool, damp haze lies on the floor of a cave and in its hollows (a layer about two blocks deep, like
-    // the ground haze outside), glowing warm with the torches, lanterns and lava near the player (the block light at
-    // the eye); the far end of a big cave dims only a little. The walls and the way ahead stay in view.
-    float cave = 1.0 - smoothstep(0.02, 0.35, eyeSky);
-    if (cave > 0.0) {
-        float eyeBlock = float(eyeBrightnessSmooth.x) / 240.0;
-        vec3 glow = blockLightColor() * blockLightCurve(eyeBlock) * 0.09 * BLOCK_LIGHT_EXPOSURE / sceneExposure();
-        // A cool blue-grey that reads as air in the dark, not as plain black.
-        vec3 air = vec3(0.006, 0.0075, 0.011) * brightnessLift() + glow;
-        float floorHaze = groundLayerDepth(playerPos, hazeBase(playerPos), 0.45, 3.0) * 0.06;
-        float depthDim = dist * 0.006;
-        float caveAmount = min(1.0 - exp(-(floorHaze + depthDim) * CAVE_FOG_DENSITY * smoothstep(2.0, 10.0, dist)), 0.5)
-                * cave;
-        color = mix(color, air, caveAmount);
-    }
-#endif
 #else
     float amount = smoothstep(renderDistance * 0.2, renderDistance, dist);
 #ifdef DIM_NETHER
